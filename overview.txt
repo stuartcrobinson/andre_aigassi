@@ -1,0 +1,27 @@
+current plan:
+
+TENNIS 
+identify forehand vs backhand using arithmetic on pose data from openpose on closest tennis player
+using 4k video (lower resolution versions) so frames are nice and sharp - helps identify ball and racket
+- paint tennis ball contrail on screen FOLLOWING hit - don't cover player
+- paint tennis racket swing on screen - don't cover player
+    - use player segmentation mask to know where NOT to paint contrail or swing trace. 
+
+
+
+posenet - super fast but sucks cos js.  cors violations etc.  could be great for loading lstm fighting stick figure predictions
+
+openpose - slow but excellent.  will prob need p2 to render 19 second clip.  took 30 minutes on laptop to get poses for 4 second video.  
+            although eh that's just a few hours on laptop.  maybe not worth aws hassle.  might need docker / install problems
+
+            0.1 fps on my mac
+
+            eg    
+            ./build/examples/openpose/openpose.bin --video examples/media/video.avi --write_video output/result.avi --write_json output/
+            ./build/examples/openpose/openpose.bin --image_dir ~/repos/computervision/attempt1/img/in --write_images ~/repos/computervision/attempt1/img/out --write_json ~/repos/computervision/attempt1/img/out
+            ./build/examples/openpose/openpose.bin --video /Users/stuartrobinson/repos/computervision/attempt1/tennis_video/stanford_single_backhand.mov --write_video /Users/stuartrobinson/repos/computervision/attempt1/tennis_video/out/stanford_single_backhand/stanford_single_backhand.avi --write_json /Users/stuartrobinson/repos/computervision/attempt1/tennis_video/out/stanford_single_backhand
+
+maskrcnn - great for object location and segmenetation.  discovered through recent brownlee article.
+            - segmentation is sloppy even for obvious stuff
+            use this for tennis ball tracking and tennis racket tracking            
+

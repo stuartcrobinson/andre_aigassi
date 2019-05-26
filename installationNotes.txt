@@ -1,0 +1,146 @@
+notes on problems installing openpose and maskrcnn
+
+############################################################################################################
+############################################################################################################
+############################################################################################################
+############################################################################################################
+openpose
+
+ERROR 0:
+
+brew install protobuf
+
+
+ERROR 1:
+
+
+https://github.com/CMU-Perceptual-Computing-Lab/openpose/issues/423
+
+
+contains fix ^
+
+
+
+
+ERRORS 2:
+
+
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- Looking for pthread.h
+-- Looking for pthread.h - found
+-- Looking for pthread_create
+-- Looking for pthread_create - found
+-- Found Threads: TRUE
+CMake Error at /Applications/CMake.app/Contents/share/cmake-3.14/Modules/FindBoost.cmake:2155 (message):
+  Unable to find the requested Boost libraries.
+
+  Unable to find the Boost header files.  Please set BOOST_ROOT to the root
+  directory containing Boost or BOOST_INCLUDEDIR to the directory containing
+  Boost's headers.
+Call Stack (most recent call first):
+  cmake/Dependencies.cmake:8 (find_package)
+  CMakeLists.txt:49 (include)
+
+
+-- Found GFlags: /usr/local/include
+-- Found gflags  (include: /usr/local/include, library: /usr/local/lib/libgflags.dylib)
+-- Found Glog: /usr/local/include
+-- Found glog    (include: /usr/local/include, library: /usr/local/lib/libglog.dylib)
+-- Found Protobuf: /usr/local/lib/libprotobuf.dylib (found version "3.7.1")
+-- Found PROTOBUF Compiler: /usr/local/bin/protoc
+CMake Error at /Applications/CMake.app/Contents/share/cmake-3.14/Modules/FindPackageHandleStandardArgs.cmake:137 (message):
+  Could NOT find HDF5 (missing: HDF5_LIBRARIES HDF5_INCLUDE_DIRS
+  HDF5_HL_LIBRARIES HL) (found version "")
+Call Stack (most recent call first):
+  /Applications/CMake.app/Contents/share/cmake-3.14/Modules/FindPackageHandleStandardArgs.cmake:378 (_FPHSA_FAILURE_MESSAGE)
+  /Applications/CMake.app/Contents/share/cmake-3.14/Modules/FindHDF5.cmake:928 (find_package_handle_standard_args)
+  cmake/Dependencies.cmake:46 (find_package)
+  CMakeLists.txt:49 (include)
+
+
+-- Configuring incomplete, errors occurred!
+See also "/Users/stuartrobinson/repos/openpose/build/caffe/src/openpose_lib-build/CMakeFiles/CMakeOutput.log".
+make[2]: *** [caffe/src/openpose_lib-stamp/openpose_lib-configure] Error 1
+make[1]: *** [CMakeFiles/openpose_lib.dir/all] Error 2
+make: *** [all] Error 2
+
+
+
+
+fixed by:
+
+homebrew install Boost
+homebrew install hdf5 
+
+
+
+############################################################################################################
+############################################################################################################
+############################################################################################################
+############################################################################################################
+MaskRCNN
+
+https://machinelearningmastery.com/how-to-perform-object-detection-in-photographs-with-mask-r-cnn-in-keras/
+
+>>>
+>>> from mrcnn.model import MaskRCNN
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/Users/stuartrobinson/repos/computervision/Mask_RCNN/mrcnn/model.py", line 26, in <module>
+    from mrcnn import utils
+  File "/Users/stuartrobinson/repos/computervision/Mask_RCNN/mrcnn/utils.py", line 18, in <module>
+    import skimage.color
+ModuleNotFoundError: No module named 'skimage'
+>>>
+
+###############################################################################################
+
+ModuleNotFoundError: No module named 'IPython'
+pip3 install ipython
+###############################################################################################
+
+NOTE - brownlee's article reuquires TF < 2
+
+
+>>> rcnn = MaskRCNN(mode='inference', model_dir='./', config=TestConfig())
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/Users/stuartrobinson/repos/computervision/Mask_RCNN/mrcnn/model.py", line 1837, in __init__
+    self.keras_model = self.build(mode=mode, config=config)
+  File "/Users/stuartrobinson/repos/computervision/Mask_RCNN/mrcnn/model.py", line 1856, in build
+    shape=[None, None, config.IMAGE_SHAPE[2]], name="input_image")
+  File "/usr/local/lib/python3.6/site-packages/keras/engine/input_layer.py", line 178, in Input
+    input_tensor=tensor)
+  File "/usr/local/lib/python3.6/site-packages/keras/legacy/interfaces.py", line 91, in wrapper
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.6/site-packages/keras/engine/input_layer.py", line 87, in __init__
+    name=self.name)
+  File "/usr/local/lib/python3.6/site-packages/keras/backend/tensorflow_backend.py", line 517, in placeholder
+    x = tf.placeholder(dtype, shape=shape, name=name)
+AttributeError: module 'tensorflow' has no attribute 'placeholder'
+>>>
+
+led me here:
+https://stackoverflow.com/questions/56226284/why-do-i-get-attributeerror-module-tensorflow-has-no-attribute-placeholder
+
+fixed with:
+pip3 install tensorflow==1.7
+
+
+
+https://machinelearningmastery.com/how-to-perform-object-detection-in-photographs-with-mask-r-cnn-in-keras/
+
+
+1.  ModuleNotFoundError: No module named 'skimage'
+2.  ModuleNotFoundError: No module named 'IPython'
+3.  AttributeError: module 'tensorflow' has no attribute 'placeholder'
+
+
+1.  pip3 install scikit-image
+2.  pip3 install ipython
+3.  pip3 install tensorflow==1.7
+    (To downgrade from version 2. https://stackoverflow.com/questions/56226284/why-do-i-get-attributeerror-module-tensorflow-has-no-attribute-placeholder
+)
+
+

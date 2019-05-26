@@ -1,0 +1,70 @@
+<html>
+
+<head>
+  <!-- Load TensorFlow.js 
+    
+https://github.com/tensorflow/tfjs-models/tree/master/posenet#via-script-tag 
+  
+  Uncaught (in promise) TypeError: net.estimatePoses is not a function
+    at posenetexamplejs.html:36
+  
+  -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <!-- Load Posenet -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/posenet"></script>
+</head>
+
+<body>
+  <!-- <img id='cat' src='/Users/stuartrobinson/repos/computervision/attempt1/images/cat.png' /> -->
+  <!-- <img id='cat' src='https://assets13.modaoperandi.com/images/products/698374/302094/c/medium_zimmermann-brown-zippy-safari-straight-leg-wool-jumpsuit.jpg?' /> -->
+  <img id='cat' src='' />
+</body>
+<!-- Place your code in the script tag below. You can also use an external .js file -->
+<script>
+  var flipHorizontal = false;
+
+  // var img = document.getElementById('cat');
+
+
+  var img = new Image();
+  img.crossOrigin = "anonymous";
+
+  // img.src = 'https://assets13.modaoperandi.com/images/products/698374/302094/c/medium_zimmermann-brown-zippy-safari-straight-leg-wool-jumpsuit.jpg';
+  // img.src = 'images/cat.png';
+  // document.getElementById('cat') = img
+  img.width = 320;
+  img.height = 512;
+
+  document.getElementById('cat').src = img.src;
+  // imageElement.crossOrigin = undefined;
+
+  // https://github.com/tensorflow/tfjs-models/blob/8dbb3bf14c7f8a611949ea5d7a58b5bc6346af18/posenet/demos/camera.js
+  posenet.load().then(function (net) {
+    const poses = net.estimatePoses(img, {
+      flipHorizontal: flipHorizontal,
+      decodingMethod: 'single-person'
+    });
+    const pose = poses[0];
+    // return pose;
+    // var video = imageElement;
+    // var imageScaleFactor = 0.5;
+    // var outputStride = 16;
+
+    // console.log('here1');
+    // // return net.estimateSinglePose(
+    // //   video, imageScaleFactor, flipHorizontal, outputStride);
+    // //   console.log('here2');
+    // const scaleFactor = 0.50;
+    // const flipHorizontal = false;
+    // const outputStride = 16;
+    // return net.estimateSinglePose(
+    //   img, scaleFactor, flipHorizontal, outputStride
+    // );
+    console.log('here2');
+
+  }).then(function (pose) {
+    console.log(pose);
+  })
+</script>
+
+</html>

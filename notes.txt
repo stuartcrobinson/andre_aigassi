@@ -1,0 +1,176 @@
+<!-- //https://github.com/Bluebie/nzsl-training-data-generator/blob/master/pose-machine.js - cropping hands!
+https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_calib3d/py_pose/py_pose.html - checkerboard stuff amazing
+https://michaelsobrepera.com/guides/openposeaws.html -- looks promising? 
+https://machinelearningmastery.com/how-to-perform-object-detection-in-photographs-with-mask-r-cnn-in-keras/
+^ can detect and segment tennis racket??!!?!??!?! - could be used to make cool graphics? like highlighting the swing during a hit...
+and then fading out????  
+https://www.reddit.com/r/computervision/comments/427xgc/questions_about_a_tennis_racket_detector_program/
+potential tennis videos:
+weird racket: https://www.youtube.com/watch?v=5_TV_sxVdCQ
+EXCELLENT:  https://www.youtube.com/watch?v=VWs6TVC-M_U <-- both solid-color rackets  - only 30 min
+https://ujjwalkarn.me/2016/08/11/intuitive-explanation-convnets/ useful on cnn ?
+
+this is cool 
+https://www.researchgate.net/figure/Multifaceted-visualization-of-example-neuron-feature-detectors-from-all-eight-layers-of-a_fig4_301845946
+
+posenet etc 
+https://golb.hplar.ch/2019/01/pretrained-models.html
+
+
+https://www.google.com/search?q=tfjs+demo+object+detection&oq=tfjs+demo+object+detection&aqs=chrome..69i57j33.6392j0j7&sourceid=chrome&ie=UTF-8
+
+detection:
+https://hackernoon.com/tensorflow-js-real-time-object-detection-in-10-lines-of-code-baf15dfb95b2
+
+https://github.com/ModelDepot/tfjs-yolo-tiny
+
+yolo webcam kinda sucks:
+https://ml5js.org/docs/yolo-webcam
+
+online image classification:
+https://ml5js.org/ (macaw)
+
+
+realtime object detection article:
+https://medium.com/@erdemisbilen/building-realtime-object-detection-webapp-with-tensorflow-js-and-angular-a4ff5062bdf1
+
+yolo, tfjs object detection:
+https://towardsdatascience.com/in-browser-object-detection-using-yolo-and-tensorflow-js-d2a2b7429f7c
+
+tfjs examples? 
+https://hpssjellis.github.io/beginner-tensorflowjs-examples-in-javascript/
+
+online live image classification training with input photos:
+https://thekevinscott.com/image-classification-with-javascript/
+
+examples tfjs
+https://github.com/tensorflow/tfjs-examples
+
+
+http://bradsliz.com/2017-11-06-object-segmentation/
+Object Detection and Segmentation in Python with Mask-RCNN
+Visual examples and discussion on the uses of object detection and object segmentation with Mask R-CNN.
+Posted on November 6, 2017
+tennis examples
+
+homecourt in action
+https://www.youtube.com/watch?v=BKIOqbx3sbU
+
+tracking basketball:  first 10 seconnds:
+https://www.youtube.com/watch?v=BKIOqbx3sbU
+
+maskrcnn is bad at tracking basketballs.  stick to tennis :( 
+
+but what about using lstm for predicting game play :(  
+
+BOXING IDEA:
+
+train lstm on kick boxing pose data.  then input stick figures and watch them go at it.  
+boxing: great compilation with minimal slo-mo bits - but blurry a lot 
+
+editing stick figures (starting points for lstm kickboxing stickfigure demo):
+https://interactjs.io/
+
+use this?  https://www.math10.com/en/geometry/geogebra/geogebra.html
+
+user will have to copy and paste source.  app will have to parse to get coordinates and connections. 
+
+no use this svg builder!!!! 
+https://codepen.io/anthonydugois/pen/mewdyZ
+from:
+https://css-tricks.com/tools-visualize-edit-svg-paths-kinda/
+
+https://greensock.com/forums/topic/17157-drawing-drag-and-drop-connectors-between-svg-elements/
+start example
+
+
+pose overlay!  creepy!  puts manikin over joints 
+###################
+###################
+###################
+###################
+###################
+###################
+
+
+
+current working code is here, cos the python library only worked from inside this project folder
+/Users/stuartrobinson/repos/computervision/Mask_RCNN
+
+NOTES:
+
+maskrcnn is better than openpose at identifying lots of blurry small people who aren't hugging
+openpose is better at identifying people even if they're hugging.  but not by much
+
+test if processing faster on smaller image... ?  no.  not faster for smaller images.
+
+
+PLAN:
+
+in a p2 ec2 instance, for each video frame:
+
+1.  OpenPose    - get pose points for main biggest closest tennis player
+                - plot points on body
+                - -- this is for identifying when a swing happens, and if forehand or backhand
+             
+
+2.  MaskRCNN    - get polygons and bounding rectangles for: 
+                    - tennis racket
+                    - sport ball
+                - this is to visually trace swings and the ball 
+
+how to draw on images in video 
+
+
+
+./build/examples/openpose/openpose.bin --video /Users/stuartrobinson/repos/computervision/attempt1/tennis_video/stanford_single_swing.mp4 --write_video /Users/stuartrobinson/repos/computervision/attempt1/tennis_video/out/single_swing.avi --write_json /Users/stuartrobinson/repos/computervision/attempt1/tennis_video/out
+./build/examples/openpose/openpose.bin --video /Users/stuartrobinson/repos/computervision/attempt1/tennis_video/stanford_single_backhand.mov --write_video /Users/stuartrobinson/repos/computervision/attempt1/tennis_video/out/stanford_single_backhand/stanford_single_backhand.avi --write_json /Users/stuartrobinson/repos/computervision/attempt1/tennis_video/out/stanford_single_backhand
+
+
+
+splitting video into frames:
+
+vlc sucks.  skips frames.
+
+trying ffmpeg: https://www.bugcodemaster.com/article/extract-images-frame-frame-video-file-using-ffmpeg
+
+ffmpeg -i video.webm thumb%04d.jpg -hide_banner
+ffmpeg -i stanford_single_backhand.mov thumb%05d.png
+ffmpeg -i stanford_single_swing.mp4 ./frames/stanford_single_swing/thumb%05d.png
+
+FFMPEG WORKS GREAT!!!!!!!!!!!! f yeah    
+
+now do maskrcnn per saved frame.
+- how to save python image? 
+ - https://github.com/matterport/Mask_RCNN/commit/bc8f148b820ebd45246ed358a120c99b09798d71 !! works great 
+
+
+??? how to get framerate for video?
+
+ffmpeg -i videoname
+
+29.97 fps for stanford_single_backhand.mov
+
+??? how to get resolution?
+
+https://superuser.com/questions/841235/how-do-i-use-ffmpeg-to-get-the-video-resolution
+
+ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 stanford_single_backhand.mov
+
+1280x720 for stanford_single_backhand.mov
+
+
+how to combine frames into video?
+
+http://hamelot.io/visualization/using-ffmpeg-to-convert-a-set-of-images-into-a-video/
+
+ffmpeg -r 30 -s 1280x720 -i thumb%05d.png.jpg -vcodec libx264 -crf 25  -pix_fmt yuv420p test.mp4
+
+works!
+
+now, how to segment in higher quality?  png instead of jpg 
+
+
+
+compare pose results (to find the closer tennis player) by comparing distance between points 1 and 8 -- neck and midhip. 
+3 elements per bodypart (x, y, strength?)

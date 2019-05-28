@@ -1,5 +1,5 @@
 # how?
-
+# pd.set_option("display.max_rows", 8)
 # look for a series of 5 frames where the right wrist goes cumulative D distance
 
 # D = 250 pixels?  make it relative to back height?
@@ -43,10 +43,11 @@ per index in arrays,
     find frame where tennis ball direction changes?
 
 '''
-
 import copy
+import time
 
 import numpy as np
+import pandas as pd
 from scipy.spatial import distance
 
 import brownlee_maskrcnn.ex4 as ex4
@@ -86,36 +87,67 @@ def getPlayerPoses(videoName):
     return playerPoses
 
 
-def getPlayerBoxes(videoName):
+#
+# def getPlayerBoxes(videoName):
+#     numFrames = len(ex4.getRawVideoFrames(videoName))
+#     playerBoxes = [{} for i in range(numFrames)]
+#     for i in range(numFrames):
+#         try:
+#             frameNumber = i + 1
+#             r = np.load(ex4.getMrcnnDataPath(videoName, frameNumber)).item()
+#             personMrcnn = ex4.getBiggestMrcnnPerson(r)
+#             playerBox = personMrcnn['roi']
+#             playerBoxes[i] = playerBox
+#         except:
+#             continue
+#     return playerBoxes
+#
+#
+# def getRacketBoxes(videoName):
+#     # racketMrcnn = getBestFromMrcnn(TENNIS_RACKET, r)
+#     # racketBox = racketMrcnn['roi']
+#     numFrames = len(ex4.getRawVideoFrames(videoName))
+#     racketBoxes = [{} for i in range(numFrames)]
+#     for i in range(numFrames):
+#         try:
+#             frameNumber = i + 1
+#             r = np.load(ex4.getMrcnnDataPath(videoName, frameNumber)).item()
+#             racketMrcnn = ex4.getBestFromMrcnn(ex4.TENNIS_RACKET, r)
+#             racketBox = racketMrcnn['roi'] if 'roi' in racketMrcnn else None
+#             racketBoxes[i] = racketBox
+#         except:
+#             continue
+#     return racketBoxes
+#
+
+def getStuffFromMrcnnNpyFiles(obj1, obj2, obj3):
     numFrames = len(ex4.getRawVideoFrames(videoName))
-    playerBoxes = [{} for i in range(numFrames)]
+    obj1Boxes = [{} for i in range(numFrames)]
+    obj2Boxes = [{} for i in range(numFrames)]
+    obj3Boxes = [{} for i in range(numFrames)]
+    racketMasks = [{} for i in range(numFrames)]
     for i in range(numFrames):
         try:
             frameNumber = i + 1
+            print('frame: ', frameNumber)
             r = np.load(ex4.getMrcnnDataPath(videoName, frameNumber)).item()
-            personMrcnn = ex4.getBiggestMrcnnPerson(r)
-            playerBox = personMrcnn['roi']
-            playerBoxes[i] = playerBox
+            try:
+                racketMrcnn = ex4.getBestFromMrcnn(ex4.TENNIS_RACKET, r)
+                racketMasks[i] = racketMrcnn['mask'] if 'mask' in racketMrcnn else None
+            except:
+                pass
+            obj1Mrcnn = ex4.getBestFromMrcnn(obj1, r)
+            obj2Mrcnn = ex4.getBestFromMrcnn(obj2, r)
+            obj3Mrcnn = ex4.getBestFromMrcnn(obj3, r)
+            obj1Box = obj1Mrcnn['roi'] if 'roi' in obj1Mrcnn else None
+            obj2Box = obj2Mrcnn['roi'] if 'roi' in obj2Mrcnn else None
+            obj3Box = obj3Mrcnn['roi'] if 'roi' in obj3Mrcnn else None
+            obj1Boxes[i] = obj1Box
+            obj2Boxes[i] = obj2Box
+            obj3Boxes[i] = obj3Box
         except:
             continue
-    return playerBoxes
-
-
-def getRacketBoxes(videoName):
-    # racketMrcnn = getBestFromMrcnn(TENNIS_RACKET, r)
-    # racketBox = racketMrcnn['roi']
-    numFrames = len(ex4.getRawVideoFrames(videoName))
-    racketBoxes = [{} for i in range(numFrames)]
-    for i in range(numFrames):
-        try:
-            frameNumber = i + 1
-            r = np.load(ex4.getMrcnnDataPath(videoName, frameNumber)).item()
-            racketMrcnn = ex4.getBestFromMrcnn(ex4.TENNIS_RACKET, r)
-            racketBox = racketMrcnn['roi'] if 'roi' in racketMrcnn else None
-            racketBoxes[i] = racketBox
-        except:
-            continue
-    return racketBoxes
+    return obj1Boxes, obj2Boxes, obj3Boxes, racketMasks
 
 
 def getRacketExtremeCoords(mask, rWristCoords, rElbowCoords, rShoulderCoords):
@@ -152,14 +184,23 @@ def getRacketExtremeCoords(mask, rWristCoords, rElbowCoords, rShoulderCoords):
     return proximal, distal
 
 
+def getRacketProxAndDist(x):
+    i = x.name
+    racketMask = racketMasks[i]
+    pose = playerPoses[i]
+    proximalCoords, distalCoords = getRacketExtremeCoords(racketMask,
+                                                          ex4.getBodyPartCoordinates(ex4.rightWristNumber, pose),
+                                                          ex4.getBodyPartCoordinates(ex4.rightElbowNumber, pose),
+                                                          ex4.getBodyPartCoordinates(ex4.rightShoulderNumber, pose))
+    return (proximalCoords, distalCoords)
+
+
 videoName = "19sec"
 
 numFrames = len(ex4.getRawVideoFrames(videoName))
 
 playerPoses = getPlayerPoses(videoName)
-playerBoxes = getPlayerBoxes(videoName)
-racketBoxes = getRacketBoxes(videoName)
-# racketMasks = getRacketMasks(videoName)
+playerBoxes, racketBoxes, tbBoxes, racketMasks = getStuffFromMrcnnNpyFiles(ex4.PERSON, ex4.TENNIS_RACKET, ex4.SPORT_BALL)
 
 analysis = ex4.readJsonFile(ex4.getAnalysisPath(videoName))
 
@@ -174,21 +215,28 @@ for i in range(numFrames):
     side = ex4.getActionSide(personBox, pose, racketBox)
     analysis[i]['racket_side'] = side
 
-# racketMasks = getRacketMasks(videoName)
+df = pd.DataFrame(analysis)
+start = time.time()
+df['racket_proxAndDist'] = df.apply(lambda x: getRacketProxAndDist(x), axis=1)
+print("elapsed time: ", time.time() - start)
+df[['racket_proximal', 'racket_distal']] = pd.DataFrame(df['racket_proxAndDist'].tolist(), index=df.index)
+df = df.drop(columns='racket_proxAndDist')
 
 for i in range(numFrames):
     print(i)
     frameNumber = i + 1
     pose = playerPoses[i]
-    r = np.load(ex4.getMrcnnDataPath(videoName, frameNumber)).item()
-    racketMrcnn = ex4.getBestFromMrcnn(ex4.TENNIS_RACKET, r)
-    racketMask = racketMrcnn['mask'] if 'mask' in racketMrcnn else None
+    # r = np.load(ex4.getMrcnnDataPath(videoName, frameNumber)).item()
+    # racketMrcnn = ex4.getBestFromMrcnn(ex4.TENNIS_RACKET, r)
+    # racketMask = racketMrcnn['mask'] if 'mask' in racketMrcnn else None
+    racketMask = racketMasks[i]
     proximalCoords, distalCoords = getRacketExtremeCoords(racketMask,
                                                           ex4.getBodyPartCoordinates(ex4.rightWristNumber, pose),
                                                           ex4.getBodyPartCoordinates(ex4.rightElbowNumber, pose),
                                                           ex4.getBodyPartCoordinates(ex4.rightShoulderNumber, pose))
     analysis[i]['racket_distal'] = distalCoords
     analysis[i]['racket_proximal'] = proximalCoords
+    # elapsed time:  14.363679885864258
 
 for i in range(5, numFrames):
     if 'racket_distal' not in analysis[i]:
@@ -204,29 +252,47 @@ for i in range(5, numFrames):
             analysis[i]['racket_distal_delta_3'] = distance.euclidean(analysis[i]['racket_distal'], analysis[i - 3]['racket_distal'])
         if analysis[i - 5]['racket_distal'] is not None:
             analysis[i]['racket_distal_delta_5'] = distance.euclidean(analysis[i]['racket_distal'], analysis[i - 5]['racket_distal'])
-        deltas = [analysis[i - 0]['racket_distal_delta_1'],
-                  analysis[i - 1]['racket_distal_delta_1'],
-                  analysis[i - 2]['racket_distal_delta_1'],
-                  analysis[i - 3]['racket_distal_delta_1'],
-                  analysis[i - 4]['racket_distal_delta_1']]
-        deltas = list(filter(None.__ne__, deltas))  # https://stackoverflow.com/a/54260099/8870055
+        try:
+            deltas = [analysis[i - 0]['racket_distal_delta_1'],
+                      analysis[i - 1]['racket_distal_delta_1'],
+                      analysis[i - 2]['racket_distal_delta_1'],
+                      analysis[i - 3]['racket_distal_delta_1'],
+                      analysis[i - 4]['racket_distal_delta_1']]
+            deltas = list(filter(None.__ne__, deltas))  # https://stackoverflow.com/a/54260099/8870055
+            analysis[i]['racket_distal_mean_5_delta'] = np.mean(deltas)
+        except:
+            pass
 
-        TODO start here
+for i in range(5, numFrames):
+    # tennis ball stuff: tb
+    # new columns:  tb_coords, tb_radius, tb_vec1,  tb_vec2,  tb_vec3, tb_vec4, tb_d1, tb_d2, tb_d3, tb_d4
+    # how to get tennis ball coordinates per frame ...
 
-        working on getting measurements for distal racket tip speed to determine when a swing is happening.
+    pass
 
-            getting ave speed over 5-frame span.  determine threshold for swings.  count how many actual swings there in are 19sec
+# convert to pandas dataframe.  this json is nasty
 
-        next, get tennis ball coordinates, and add tennis ball velocities to 'analysis'
-        then add "turn" key for when the velocity changes abruptly
-        wait shit ... how to encode velocity?  since slope is bidirectional
-        maybe encode velocity as a vector?
-    to find turn, calculate the angle between the vectors
+df = pd.DataFrame(analysis)
 
-    when theres a turn and there's a fast racket motion and there's a racketsidechange, there should be a swing
+# new columns:  tb_coords, tb_radius, tb_vec1,  tb_vec2,  tb_vec3, tb_vec4, tb_d1, tb_d2, tb_d3, tb_d4
 
+# 571 {'racket_side': 'right', 'racket_distal': (690, 484), 'racket_proximal': (671, 470), 'racket_distal_delta_1': 75.39230729988306, 'racket_distal_delta_3': 110.22250223978767, 'racket_distal_delta_5': 142.42541907960108, 'racket_distal_mean_5_delta': 31.544782825960414}
 
-        analysis[i]['racket_distal_mean_delta_5'] = np.mean(deltas)
+#
+#     TODO start here
+#
+#     working on getting measurements for distal racket tip speed to determine when a swing is happening.
+#
+#         getting ave speed over 5-frame span.  determine threshold for swings.  count how many actual swings there in are 19sec
+#
+#     next, get tennis ball coordinates, and add tennis ball velocities to 'analysis'
+#     then add "turn" key for when the velocity changes abruptly
+#     wait shit ... how to encode velocity?  since slope is bidirectional
+#     maybe encode velocity as a vector?
+# to find turn, calculate the angle between the vectors
+#
+# when theres a turn and there's a fast racket motion and there's a racketsidechange, there should be a swing
+#
 
 for i in range(numFrames):
     print(i, analysis[i])

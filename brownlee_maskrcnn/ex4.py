@@ -230,6 +230,12 @@ def getWidth(box):
     return box[3] - box[1]
 
 
+def getCenter(box):
+    x = (box[X1] + box[X2]) / 2
+    y = (box[Y1] + box[Y2]) / 2
+    return x, y
+
+
 def cropImage(img, box):
     # box:  y1, x1, y2, x2
     # https://stackoverflow.com/a/41909861/8870055
@@ -254,11 +260,11 @@ def getBestFromMrcnn(objectName, r):
             count += 1
             mrcnnObjectIter = {'roi': boxes[i], 'mask': masks[:, :, i], 'score': scores[i]}
             mrcnnObjectScoreIter = scores[i]
-            print(count, objectName, "- score:", mrcnnObjectScoreIter)
+            # print(count, objectName, "- score:", mrcnnObjectScoreIter)
             if mrcnnObjectScoreIter > mrcnnObjectScore:
                 mrcnnObjectScore = mrcnnObjectScoreIter
                 mrcnnObject = mrcnnObjectIter
-    print("mrcnn score in getBestFromMrcnn", mrcnnObject['score'] if 'score' in mrcnnObject else None)
+    # print("mrcnn score in getBestFromMrcnn", mrcnnObject['score'] if 'score' in mrcnnObject else None)
     return mrcnnObject
 
 

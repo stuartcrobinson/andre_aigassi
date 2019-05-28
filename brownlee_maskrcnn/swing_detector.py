@@ -1,49 +1,6 @@
-# how?
-# pd.set_option("display.max_rows", 8)
-# look for a series of 5 frames where the right wrist goes cumulative D distance
-
-# D = 250 pixels?  make it relative to back height?
-
-'''
-
-open all mrcnn npy files to get 'sports ball' bounding boxes
-
-clean:  if ball doens't move by more than 25 pixels AND it's not in line with prev two balls, AND it's 100 pixels or more away from prev
-            throw it out
-
-
-0.  generate list of ball velocities (2d) per frame
-        v = prev frame to current frame
-                if not in prev frame, use frame before that (but no more?)
-        v = slope of the line of the ball movement from prev frame
-
-
-
-
--------
-
-so, for each pose data file
-... no just open all the pose data files
-
-store files as list of biggest persons
-
-make 2 lists:
-right wrist coordinates
-neck coordinates
-
-
-per index in arrays,
-
-    get 5th index in the future, k
-    if wrist changes body sides between i and k, check wrist speed - cumulative between positions
-                    if wrist position is ever 0, take mean of surrounding coordinates
-    if cumulative wrist speed > cutoff
-        identify swing!  check backhand/forehand
-    find frame where tennis ball is opposite the racket from camera?
-    find frame where tennis ball direction changes?
-
-'''
+# this is cool http://pythontutor.com/visualize.html#mode=display  interactive visualizer
 import copy
+import math
 import time
 
 import numpy as np
@@ -52,28 +9,13 @@ from scipy.spatial import distance
 
 import brownlee_maskrcnn.ex4 as ex4
 
-print(distance.euclidean((1, 2), (1, 2)))
-wristCoords = []
-neckCoords = []
+pd.set_option("display.max_rows", 600)
 
-
-# stanford_single_swing_000000000000_keypoints.json
-
-# frameNumber starts at 0
-#
-#
-# # poseFile = '/Users/stuartrobinson/repos/computervision/andre_aigassi/images/tennis_video/frames/pose/data/19sec/000099_keypoints.json'
-# poseFile = '/Users/stuartrobinson/repos/computervision/andre_aigassi/images/img/out/000099_keypoints.json'
-# poses = ex4.readJsonFile(poseFile)
-# people = poses['people']
-#
-# for person in people:
-#     size = ex4.getPosePersonSize(person)
-#     print("size", size)
-#     print(json.dumps(ex4.getReadablePose(person), indent=4))
-# print('######################################################################')
-# personPose = ex4.getMainPlayerPose(poses)
-# print(json.dumps(ex4.getReadablePose(personPose), indent=4))
+# box:  y1, x1, y2, x2
+Y1 = 0
+X1 = 1
+Y2 = 2
+X2 = 3
 
 
 def getPlayerPoses(videoName):
@@ -87,67 +29,87 @@ def getPlayerPoses(videoName):
     return playerPoses
 
 
-#
-# def getPlayerBoxes(videoName):
-#     numFrames = len(ex4.getRawVideoFrames(videoName))
-#     playerBoxes = [{} for i in range(numFrames)]
-#     for i in range(numFrames):
-#         try:
-#             frameNumber = i + 1
-#             r = np.load(ex4.getMrcnnDataPath(videoName, frameNumber)).item()
-#             personMrcnn = ex4.getBiggestMrcnnPerson(r)
-#             playerBox = personMrcnn['roi']
-#             playerBoxes[i] = playerBox
-#         except:
-#             continue
-#     return playerBoxes
-#
-#
-# def getRacketBoxes(videoName):
-#     # racketMrcnn = getBestFromMrcnn(TENNIS_RACKET, r)
-#     # racketBox = racketMrcnn['roi']
-#     numFrames = len(ex4.getRawVideoFrames(videoName))
-#     racketBoxes = [{} for i in range(numFrames)]
-#     for i in range(numFrames):
-#         try:
-#             frameNumber = i + 1
-#             r = np.load(ex4.getMrcnnDataPath(videoName, frameNumber)).item()
-#             racketMrcnn = ex4.getBestFromMrcnn(ex4.TENNIS_RACKET, r)
-#             racketBox = racketMrcnn['roi'] if 'roi' in racketMrcnn else None
-#             racketBoxes[i] = racketBox
-#         except:
-#             continue
-#     return racketBoxes
-#
+def overlapsOtherBox(b, o):
+    if b is None or o is None:
+        return False
+    topLeftIsInside_ = o[X1] < b[X1] < o[X2] and o[Y1] < b[Y1] < o[Y2]
+    botRightIsInside = o[X1] < b[X2] < o[X2] and o[Y1] < b[Y2] < o[Y2]
+    botLeftIsInside_ = o[X1] < b[X1] < o[X2] and o[Y1] < b[Y2] < o[Y2]
 
-def getStuffFromMrcnnNpyFiles(obj1, obj2, obj3):
+    return topLeftIsInside_ or botRightIsInside or botLeftIsInside_
+
+
+def isInsideOtherBox(b, o):
+    if b is None or o is None:
+        return False
+    topLeftIsInside_ = o[X1] < b[X1] < o[X2] and o[Y1] < b[Y1] < o[Y2]
+    botRightIsInside = o[X1] < b[X2] < o[X2] and o[Y1] < b[Y2] < o[Y2]
+    return topLeftIsInside_ and botRightIsInside
+
+
+# add something here to make sure the proximal racket point is closer to his elbow than either foot
+# no, ensure it's certain distance from wrist or elbow.  see frame 411 of 19sec
+# to ensure this is the player's racket and not the opponen't racket
+# to ensure it's not a shadow
+
+def isValidRacket(racketBox, personBox, pose):
+    if racketBox is None or personBox is None:
+        return False
+    elbowCoord = ex4.getBodyPartCoordinates(ex4.rightElbowNumber, pose)
+    wristCoord = ex4.getBodyPartCoordinates(ex4.rightWristNumber, pose)
+    racketBoxTL = (racketBox[X1], racketBox[Y1])
+    racketBoxTR = (racketBox[X2], racketBox[Y1])
+    racketBoxBR = (racketBox[X2], racketBox[Y2])
+    racketBoxBL = (racketBox[X1], racketBox[Y2])
+    if wristCoord[0] > 0:
+        minDist = min(distance.euclidean(racketBoxTL, wristCoord),
+                      distance.euclidean(racketBoxTR, wristCoord),
+                      distance.euclidean(racketBoxBR, wristCoord),
+                      distance.euclidean(racketBoxBL, wristCoord))
+        if minDist > 70:
+            print('wrist mindist', minDist)
+            return False
+    elif elbowCoord[0] > 0:
+        minDist = min(distance.euclidean(racketBoxTL, elbowCoord),
+                      distance.euclidean(racketBoxTR, elbowCoord),
+                      distance.euclidean(racketBoxBR, elbowCoord),
+                      distance.euclidean(racketBoxBL, elbowCoord))
+        if minDist > 105:
+            print('elbow mindist', minDist)
+            return False
+    # return True
+    maxDimension = max(ex4.getWidth(racketBox), ex4.getHeight(racketBox))
+    return maxDimension > 45
+    # print('maxDimension', maxDimension)
+    # return overlapsOtherBox(racketBox, personBox) or maxDimension > 60  # and maxDimension > 50)
+
+
+def getStuffFromMrcnnNpyFiles(playerPoses):
     numFrames = len(ex4.getRawVideoFrames(videoName))
-    obj1Boxes = [{} for i in range(numFrames)]
-    obj2Boxes = [{} for i in range(numFrames)]
-    obj3Boxes = [{} for i in range(numFrames)]
-    racketMasks = [{} for i in range(numFrames)]
+    personBoxes = [None for i in range(numFrames)]
+    racketBoxes = [None for i in range(numFrames)]
+    ballBoxes = [None for i in range(numFrames)]
+    racketMasks = [None for i in range(numFrames)]
     for i in range(numFrames):
-        try:
-            frameNumber = i + 1
-            print('frame: ', frameNumber)
-            r = np.load(ex4.getMrcnnDataPath(videoName, frameNumber)).item()
-            try:
-                racketMrcnn = ex4.getBestFromMrcnn(ex4.TENNIS_RACKET, r)
-                racketMasks[i] = racketMrcnn['mask'] if 'mask' in racketMrcnn else None
-            except:
-                pass
-            obj1Mrcnn = ex4.getBestFromMrcnn(obj1, r)
-            obj2Mrcnn = ex4.getBestFromMrcnn(obj2, r)
-            obj3Mrcnn = ex4.getBestFromMrcnn(obj3, r)
-            obj1Box = obj1Mrcnn['roi'] if 'roi' in obj1Mrcnn else None
-            obj2Box = obj2Mrcnn['roi'] if 'roi' in obj2Mrcnn else None
-            obj3Box = obj3Mrcnn['roi'] if 'roi' in obj3Mrcnn else None
-            obj1Boxes[i] = obj1Box
-            obj2Boxes[i] = obj2Box
-            obj3Boxes[i] = obj3Box
-        except:
-            continue
-    return obj1Boxes, obj2Boxes, obj3Boxes, racketMasks
+        # frameNumber = 346
+        # i = 345
+        frameNumber = i + 1
+        print('frame: ', frameNumber)
+        pose = playerPoses[i]
+        r = np.load(ex4.getMrcnnDataPath(videoName, frameNumber)).item()
+        personMrcnn = ex4.getBestFromMrcnn(ex4.PERSON, r)  # same as biggest i guess??
+        racketMrcnn = ex4.getBestFromMrcnn(ex4.TENNIS_RACKET, r)
+        ballMrcnn = ex4.getBestFromMrcnn(ex4.SPORT_BALL, r)
+        personBox = personMrcnn['roi'] if 'roi' in personMrcnn else None
+        racketBox = racketMrcnn['roi'] if 'roi' in racketMrcnn else None
+        ballBox = ballMrcnn['roi'] if 'roi' in ballMrcnn else None
+        personBoxes[i] = personBox
+        if isValidRacket(racketBox, personBox, pose):
+            racketBoxes[i] = racketBox
+            racketMrcnn = ex4.getBestFromMrcnn(ex4.TENNIS_RACKET, r)
+            racketMasks[i] = racketMrcnn['mask'] if 'mask' in racketMrcnn else None
+        ballBoxes[i] = ballBox
+    return personBoxes, racketBoxes, ballBoxes, racketMasks
 
 
 def getRacketExtremeCoords(mask, rWristCoords, rElbowCoords, rShoulderCoords):
@@ -192,7 +154,37 @@ def getRacketProxAndDist(x):
                                                           ex4.getBodyPartCoordinates(ex4.rightWristNumber, pose),
                                                           ex4.getBodyPartCoordinates(ex4.rightElbowNumber, pose),
                                                           ex4.getBodyPartCoordinates(ex4.rightShoulderNumber, pose))
-    return (proximalCoords, distalCoords)
+    return proximalCoords, distalCoords
+
+
+def getTbInR(x, tbBoxes, racketBoxes):
+    i = x.name
+    tbBox = tbBoxes[i]
+    racketBox = racketBoxes[i]
+    if isInsideOtherBox(tbBox, racketBox):
+        return 2
+    if overlapsOtherBox(tbBox, racketBox):
+        return 1
+    return 0
+
+
+def distLam(x1, y1, x2, y2):
+    if x1 is None or x2 is None or y1 is None or y2 is None:
+        return None
+    return math.sqrt(((x1 - x2) ** 2) + ((y1 - y2) ** 2))
+
+
+def getTennisBallRadiusAndCoordinates(x, tbBoxes):
+    i = x.name
+    tbBox = tbBoxes[i]
+    # print(i, tbBox)
+    if tbBox is None:
+        return None, None, None
+    width = ex4.getWidth(tbBox)
+    height = ex4.getHeight(tbBox)
+    radius = min(width, height) / 2
+    coords = ex4.getCenter(tbBox)
+    return radius, coords[0], coords[1]
 
 
 videoName = "19sec"
@@ -200,7 +192,11 @@ videoName = "19sec"
 numFrames = len(ex4.getRawVideoFrames(videoName))
 
 playerPoses = getPlayerPoses(videoName)
-playerBoxes, racketBoxes, tbBoxes, racketMasks = getStuffFromMrcnnNpyFiles(ex4.PERSON, ex4.TENNIS_RACKET, ex4.SPORT_BALL)
+
+# frameNumber = 346
+
+
+playerBoxes, racketBoxes, tbBoxes, racketMasks = getStuffFromMrcnnNpyFiles(playerPoses)
 
 analysis = ex4.readJsonFile(ex4.getAnalysisPath(videoName))
 
@@ -208,7 +204,7 @@ if len(analysis) < numFrames:
     analysis = [{} for i in range(numFrames)]
 
 for i in range(numFrames):
-    print(i)
+    # print(i)
     pose = playerPoses[i]
     personBox = playerBoxes[i]
     racketBox = racketBoxes[i]
@@ -216,155 +212,187 @@ for i in range(numFrames):
     analysis[i]['racket_side'] = side
 
 df = pd.DataFrame(analysis)
+df['f'] = df.index + 1
+
+cols_to_order = ['f']
+new_columns = cols_to_order + (df.columns.drop(cols_to_order).to_list())
+df = df[new_columns]
+
 start = time.time()
 df['racket_proxAndDist'] = df.apply(lambda x: getRacketProxAndDist(x), axis=1)
 print("elapsed time: ", time.time() - start)
+# df = df[['racket_side','racket_proxAndDist']]
+
 df[['racket_proximal', 'racket_distal']] = pd.DataFrame(df['racket_proxAndDist'].tolist(), index=df.index)
-df[['rackProxX', 'rackProxY']] = pd.DataFrame(df['racket_proximal'].tolist(), index=df.index)
-df[['rackDistX', 'rackDistY']] = pd.DataFrame(df['racket_distal'].tolist(), index=df.index)
-df = df.drop(columns=['racket_proxAndDist', 'racket_proximal', 'racket_distal'])
 
-df['rd0'] = df['racket_proximal']
-df['rd1'] = df['racket_proximal'].shift(1)
-df['rd3'] = df['racket_proximal'].shift(3)
-df['rd5'] = df['racket_proximal'].shift(5)
+df['racket_proximal'] = df['racket_proximal'].apply(lambda x: (None, None) if x is None else x)
+df['racket_distal'] = df['racket_distal'].apply(lambda x: (None, None) if x is None else x)
 
-import math
+df[['rpx0', 'rpy0']] = pd.DataFrame(df['racket_proximal'].tolist(), index=df.index)
+df[['rdx0', 'rdy0']] = pd.DataFrame(df['racket_distal'].tolist(), index=df.index)
+df = df.drop(columns=['racket_proximal', 'racket_distal'])
 
+df['tbInR'] = df.apply(lambda x: getTbInR(x, tbBoxes, racketBoxes), axis=1)
 
-def distLam(p1, p2):
-    x1 = p1[0]
-    y1 = p1[1]
-    x2 = p2[0]
-    y2 = p2[1]
-    if p1 is None or p2 is None:
-        return None
-    if x1 is None or x2 is None or y1 is None or y2 is None:
-        return None
-    return math.sqrt(((p1[0] - p2[0]) ** 2) + ((p1[1] - p2[1]) ** 2))
+df['rdx1'] = df['rdx0'].shift(1)
+df['rdy1'] = df['rdy0'].shift(1)
+df['rdx2'] = df['rdx0'].shift(2)
+df['rdy2'] = df['rdy0'].shift(2)
+df['rdx3'] = df['rdx0'].shift(3)
+df['rdy3'] = df['rdy0'].shift(3)
+df['rdx4'] = df['rdx0'].shift(4)
+df['rdy4'] = df['rdy0'].shift(4)
+df['rdx5'] = df['rdx0'].shift(5)
+df['rdy5'] = df['rdy0'].shift(5)
 
+df['rdΔ1'] = df.apply(lambda x: distLam(x.rdx0, x.rdy0, x.rdx1, x.rdy1), axis=1)
+df['rdΔ2'] = df.apply(lambda x: distLam(x.rdx0, x.rdy0, x.rdx2, x.rdy2), axis=1)
+df['rdΔ3'] = df.apply(lambda x: distLam(x.rdx0, x.rdy0, x.rdx3, x.rdy3), axis=1)
+df['rdΔ4'] = df.apply(lambda x: distLam(x.rdx0, x.rdy0, x.rdx4, x.rdy4), axis=1)
+df['rdΔ5'] = df.apply(lambda x: distLam(x.rdx0, x.rdy0, x.rdx5, x.rdy5), axis=1)
+df['rdΔ1μ6'] = df['rdΔ1'].rolling(6, min_periods=2).mean()
 
-def distLam2(p1, p2):
-    (x1, y1) = p1
-    (x2, y2) = p2
-    if x1 is None or x2 is None or y1 is None or y2 is None:
-        return None
-    # return x1 + x2 + y1 + y2
-    return p1
+df['rdΔ1_est'] = df['rdΔ1']
 
+for i in range(len(df['rdΔ1'])):
+    # print(i)
+    racketDistDelta1 = df['rdΔ1'].values[i]
+    # print(i, racketDistDelta1)
+    if pd.isna(racketDistDelta1):
+        # print(True)
+        racketDistDelta2 = df['rdΔ2'].values[i]
+        if not pd.isna(racketDistDelta2):
+            df['rdΔ1_est'].values[i] = racketDistDelta2/2
+            if i > 0 and pd.isna(df['rdΔ1_est'].values[i-1]):
+                df['rdΔ1_est'].values[i-1] = racketDistDelta2/2
 
-def distLam3(p1, p2, x1, y1, x2, y2):
-    if p1 is None or p2 is None or x1 is None or x2 is None or y1 is None or y2 is None:
-        return None
-    return p1
-
-
-def distancer(x):
-    if x[0] is not None:
-        return x[0][0]
-    else:
-        return None
-
-rd0 = df['racket_proximal']
-rd1 = df['racket_proximal'].shift(1)
-rd3 = df['racket_proximal'].shift(3)
-rd5 = df['racket_proximal'].shift(5)
-df['x1'] = 0
-df['y1'] = 0
-df['x2'] = None
-df['y2'] = 5
-# df['racket_distal_delta_1'] = distance.euclidean(rd0, rd1)
-df['racket_distal_delta_1'] = df.apply(lambda x: distance.euclidean(x.rd0, x.rd1) if x.rd0 is not None and x.rd1 is not None else None, axis=1)
-df['racket_distal_delta_1'] = df.apply(lambda x: x.rd0 if x.rd0 is not None and x.rd1 is not None else None, axis=1)
-df['racket_distal_delta_1'] = df.apply(lambda x: distLam(x.rd0, x.rd1), axis=1)
-df['racket_distal_delta_1'] = df.apply(lambda x: distLam2(x.rd0, x.rd1), axis=1)
-df['racket_distal_delta_1'] = df.apply(lambda x: distLam3(x.rd0, x.rd1, x.rd1[0], x.rd1[0], x.rd1[0], x.rd1[0]), axis=1)
-df['racket_distal_delta_1'] = df['racket_proxAndDist'].apply(distancer)
-# df['racket_distal_delta_1'] = df[['racket_proximal','racket_distal'].apply(distancer)
-df['racket_distal_delta_1'] = df.apply(lambda x: distLam((0, 0), (5, 5)), axis=1)
-df['racket_distal_delta_1'] = df.apply(lambda x: distLam((x.x1, x.y1), (x.x2, x.y2)), axis=1)
-# df['racket_distal_delta_1'] = df.apply(lambda x: distance.euclidean(rd0, rd1))
+for i in range(len(df['rdΔ1'])):
+    # print(i)
+    racketDistDelta1 = df['rdΔ1'].values[i]
+    # print(i, racketDistDelta1)
+    if pd.isna(racketDistDelta1):
+        # print(True)
+        racketDistDelta3 = df['rdΔ3'].values[i]
+        if not pd.isna(racketDistDelta3):
+            df['rdΔ1_est'].values[i] = racketDistDelta3/3
+            if i > 0 and pd.isna(df['rdΔ1_est'].values[i-1]):
+                df['rdΔ1_est'].values[i-1] = racketDistDelta3/3
+            if i > 1 and pd.isna(df['rdΔ1_est'].values[i-2]):
+                df['rdΔ1_est'].values[i-2] = racketDistDelta3/3
 
 
-for i in range(5, numFrames):
-    if 'racket_distal' not in analysis[i]:
-        continue
-    print(i, analysis[i]['racket_distal'])
-    print(i, analysis[i - 1]['racket_distal'])
-    print(i, analysis[i - 3]['racket_distal'])
-    print(i, analysis[i - 5]['racket_distal'])
-    if analysis[i]['racket_distal'] is not None:
-        if analysis[i - 1]['racket_distal'] is not None:
-            analysis[i]['racket_distal_delta_1'] = distance.euclidean(analysis[i]['racket_distal'], analysis[i - 1]['racket_distal'])
-        if analysis[i - 3]['racket_distal'] is not None:
-            analysis[i]['racket_distal_delta_3'] = distance.euclidean(analysis[i]['racket_distal'], analysis[i - 3]['racket_distal'])
-        if analysis[i - 5]['racket_distal'] is not None:
-            analysis[i]['racket_distal_delta_5'] = distance.euclidean(analysis[i]['racket_distal'], analysis[i - 5]['racket_distal'])
-        try:
-            deltas = [analysis[i - 0]['racket_distal_delta_1'],
-                      analysis[i - 1]['racket_distal_delta_1'],
-                      analysis[i - 2]['racket_distal_delta_1'],
-                      analysis[i - 3]['racket_distal_delta_1'],
-                      analysis[i - 4]['racket_distal_delta_1']]
-            deltas = list(filter(None.__ne__, deltas))  # https://stackoverflow.com/a/54260099/8870055
-            analysis[i]['racket_distal_mean_5_delta'] = np.mean(deltas)
-        except:
-            pass
+for i in range(len(df['rdΔ1'])):
+    # print(i)
+    racketDistDelta1 = df['rdΔ1'].values[i]
+    # print(i, racketDistDelta1)
+    if pd.isna(racketDistDelta1):
+        # print(True)
+        racketDistDelta4 = df['rdΔ4'].values[i]
+        if not pd.isna(racketDistDelta4):
+            df['rdΔ1_est'].values[i] = racketDistDelta4/4
+            if i > 0 and pd.isna(df['rdΔ1_est'].values[i-1]):
+                df['rdΔ1_est'].values[i-1] = racketDistDelta4/4
+            if i > 1 and pd.isna(df['rdΔ1_est'].values[i-2]):
+                df['rdΔ1_est'].values[i-2] = racketDistDelta4/4
+            if i > 2 and pd.isna(df['rdΔ1_est'].values[i-3]):
+                df['rdΔ1_est'].values[i-3] = racketDistDelta4/4
 
-for i in range(5, numFrames):
-    # tennis ball stuff: tb
-    # new columns:  tb_coords, tb_radius, tb_vec1,  tb_vec2,  tb_vec3, tb_vec4, tb_d1, tb_d2, tb_d3, tb_d4
-    # how to get tennis ball coordinates per frame ...
 
-    pass
 
-# convert to pandas dataframe.  this json is nasty
+for i in range(len(df['rdΔ1'])):
+    # print(i)
+    racketDistDelta1 = df['rdΔ1'].values[i]
+    # print(i, racketDistDelta1)
+    if pd.isna(racketDistDelta1):
+        # print(True)
+        racketDistDelta5 = df['rdΔ5'].values[i]
+        if not pd.isna(racketDistDelta5):
+            df['rdΔ1_est'].values[i] = racketDistDelta5/5
+            if i > 0 and pd.isna(df['rdΔ1_est'].values[i-1]):
+                df['rdΔ1_est'].values[i-1] = racketDistDelta5/5
+            if i > 1 and pd.isna(df['rdΔ1_est'].values[i-2]):
+                df['rdΔ1_est'].values[i-2] = racketDistDelta5/5
+            if i > 2 and pd.isna(df['rdΔ1_est'].values[i-3]):
+                df['rdΔ1_est'].values[i-3] = racketDistDelta5/5
+            if i > 3 and pd.isna(df['rdΔ1_est'].values[i-4]):
+                df['rdΔ1_est'].values[i-4] = racketDistDelta5/5
 
-df = pd.DataFrame(analysis)
 
-# new columns:  tb_coords, tb_radius, tb_vec1,  tb_vec2,  tb_vec3, tb_vec4, tb_d1, tb_d2, tb_d3, tb_d4
+df['rdΔ1μ4_est'] = df['rdΔ1_est'].rolling(4, min_periods=2).mean()
 
-# 571 {'racket_side': 'right', 'racket_distal': (690, 484), 'racket_proximal': (671, 470), 'racket_distal_delta_1': 75.39230729988306, 'racket_distal_delta_3': 110.22250223978767, 'racket_distal_delta_5': 142.42541907960108, 'racket_distal_mean_5_delta': 31.544782825960414}
+# df.query('tbInR > 0')
 
-#
-#     TODO start here
-#
-#     working on getting measurements for distal racket tip speed to determine when a swing is happening.
-#
-#         getting ave speed over 5-frame span.  determine threshold for swings.  count how many actual swings there in are 19sec
-#
-#     next, get tennis ball coordinates, and add tennis ball velocities to 'analysis'
-#     then add "turn" key for when the velocity changes abruptly
-#     wait shit ... how to encode velocity?  since slope is bidirectional
-#     maybe encode velocity as a vector?
-# to find turn, calculate the angle between the vectors
-#
-# when theres a turn and there's a fast racket motion and there's a racketsidechange, there should be a swing
-#
 
-for i in range(numFrames):
-    print(i, analysis[i])
+side6ago = df['racket_side'].shift(6)
+df['sideswitched'] = df['racket_side'] != side6ago
 
-    if side == None:
-        continue
+def encodeSwingType(r):
+    if r['sideswitched'] == True and r['rdΔ1μ4_est'] > 55:
+        if r['racket_side'] == 'right':
+            return 'Backhand'
+        if r['racket_side'] == 'left':
+            return 'Forehand'
+    return None
 
-#
-# for fileName in inputFiles:
-#     frameNumber = int(fileName.split('stanford_single_swing_')[1].split('_keypoints')[0])
-#     imgPath = join(posesDir, fileName)
-#     print("processing: ", frameNumber, imgPath)
-#     #
-#     # TODO start here -- analyze pose data to detect swing type
-#     midHipCoords = ex4.getBodyPartCoordinates(ex4.midHipPartNumber, {})
-#     print(neckCoordinates)
-#
-# numFrames = len(ex4.getRawVideoFrames(videoName))
-#
-# start = time.time()
-#
-# for frameNumber in range(1, numFrames + 1):
-#     inputImgPath = ex4.getRawImgPath(videoName, frameNumber)
-#     posesPath = getPosesPath(videoName, frameNumber)
-#     outputImgPath = getSegmentedImgOutputPath(videoName, frameNumber)
-#     outputDataPath = getSegmentedDataOutputPath(videoName, frameNumber)
-#     # if frameNumber < 98:
+df['swing'] = df.apply(lambda r: encodeSwingType(r), axis=1)
+
+
+df['tbRadiusAndCoords'] = df.apply(lambda x: getTennisBallRadiusAndCoordinates(x, tbBoxes), axis=1)
+
+df[['tbRadius', 'tbx0', 'tby0']] = pd.DataFrame(df['tbRadiusAndCoords'].tolist(), index=df.index)
+
+df = df.drop(errors='ignore',
+             columns=['tbx', 'tby', 'rdx1', 'rdx2', 'rdx3', 'rdx4', 'rdx5', 'rdy2', 'rdy4', 'rpx1', 'rpx3', 'rpx5', 'rdy1', 'rdy3', 'rdy5', 'rpy1', 'rpy3', 'rpy5', 'tbRadiusAndCoords', 'racket_distal_delta_1', 'racket_distal_delta_3',
+                      'racket_distal_delta_5'])
+
+
+df['tbx1'] = df['tbx0'].shift(1)
+df['tbx2'] = df['tbx0'].shift(2)
+df['tbx3'] = df['tbx0'].shift(3)
+df['tbx4'] = df['tbx0'].shift(4)
+df['tby1'] = df['tby0'].shift(1)
+df['tby2'] = df['tby0'].shift(2)
+df['tby3'] = df['tby0'].shift(3)
+df['tby4'] = df['tby0'].shift(4)
+
+
+# VECTORS
+# https://stackoverflow.com/questions/17332759/finding-vectors-with-2-points
+# https://stackoverflow.com/a/18514434/8870055 dealing with points and vectors and functions
+
+def unit_vector(vector):
+    """ Returns the unit vector of the vector.  """
+    return vector / np.linalg.norm(vector)
+
+
+def angle_between(v1, v2):
+    """ Returns the angle in radians between vectors 'v1' and 'v2'::
+            # >>> angle_between((1, 0, 0), (0, 1, 0))
+            # 1.5707963267948966
+            # >>> angle_between((1, 0, 0), (1, 0, 0))
+            # 0.0
+            # >>> angle_between((1, 0, 0), (-1, 0, 0))
+            3.141592653589793
+    """
+    v1_u = unit_vector(v1)
+    v2_u = unit_vector(v2)
+    return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
+
+
+df['tba0'] = df.apply(lambda r: angle_between(np.array([r.tbx1, r.tby1]), np.array([r.tbx0, r.tby0])), axis=1)
+df['tba1'] = df.apply(lambda r: angle_between(np.array([r.tbx2, r.tby2]), np.array([r.tbx0, r.tby0])), axis=1)
+df['tba2'] = df.apply(lambda r: angle_between(np.array([r.tbx3, r.tby3]), np.array([r.tbx0, r.tby0])), axis=1)
+df['tba3'] = df.apply(lambda r: angle_between(np.array([r.tbx4, r.tby4]), np.array([r.tbx0, r.tby0])), axis=1)
+
+df['tbd0'] = df.apply(lambda r: distLam(r.tbx1, r.tby1, r.tbx0, r.tby0), axis=1)
+df['tbd1'] = df.apply(lambda r: distLam(r.tbx2, r.tby2, r.tbx0, r.tby0), axis=1)
+df['tbd2'] = df.apply(lambda r: distLam(r.tbx3, r.tby3, r.tbx0, r.tby0), axis=1)
+df['tbd3'] = df.apply(lambda r: distLam(r.tbx4, r.tby4, r.tbx0, r.tby0), axis=1)
+
+# now what
+
+
+# i have all the data??????
+
+
+# lets make everytyhig fresh

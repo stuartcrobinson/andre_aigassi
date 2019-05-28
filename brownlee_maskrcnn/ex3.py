@@ -53,8 +53,8 @@ rcnn.load_weights('mask_rcnn_coco.h5', by_name=True)
 # taht start with "thumb"
 
 # inputDir = '/Users/stuartrobinson/repos/computervision/attempt1/tennis_video/frames/stanford_single_backhand'
-inputDir = '/Users/stuartrobinson/repos/computervision/attempt1/tennis_video/frames/stanford_single_swing'
-outputDir = '/Users/stuartrobinson/repos/computervision/attempt1/tennis_video/frames/stanford_single_swing_segmented'
+inputDir = '/Users/stuartrobinson/repos/computervision/andre_aigassi/images/tennis_video/frames/stanford_single_swing'
+outputDir = '/Users/stuartrobinson/repos/computervision/andre_aigassi/images/tennis_video/frames/stanford_single_swing_segmented'
 
 inputFiles = [f for f in listdir(inputDir) if isfile(join(inputDir, f)) and 'thumb' in f]
 
@@ -76,10 +76,11 @@ for imgName in inputFiles:
     class_ids = r['class_ids']
     scores = r['scores']
     output_name = join(outputDir, imgName)
-    save_image(image, output_name, boxes, masks, class_ids, scores, class_names)
-    np.save(output_name + '.npy', r)
+    # save_image(image, output_name, boxes, masks, class_ids, scores, class_names)
+    # np.save(output_name + '.npy', r)
     print("elapsed time: ", time.time() - start)
-#     display_instances(image, boxes, masks, class_ids, class_names, scores)
+    display_instances(image, boxes, masks, class_ids, class_names, scores)
+    # break
 
 print("elapsed time: ", time.time() - start)
 #

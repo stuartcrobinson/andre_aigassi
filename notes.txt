@@ -126,6 +126,15 @@ how to draw on images in video
 ./build/examples/openpose/openpose.bin --video /Users/stuartrobinson/repos/computervision/attempt1/tennis_video/stanford_single_swing.mp4 --write_video /Users/stuartrobinson/repos/computervision/attempt1/tennis_video/out/single_swing.avi --write_json /Users/stuartrobinson/repos/computervision/attempt1/tennis_video/out
 ./build/examples/openpose/openpose.bin --video /Users/stuartrobinson/repos/computervision/attempt1/tennis_video/stanford_single_backhand.mov --write_video /Users/stuartrobinson/repos/computervision/attempt1/tennis_video/out/stanford_single_backhand/stanford_single_backhand.avi --write_json /Users/stuartrobinson/repos/computervision/attempt1/tennis_video/out/stanford_single_backhand
 
+/Users/stuartrobinson/repos/computervision/andre_aigassi/images/tennis_video/stanford_19sec_clip_hifi.mov
+
+./build/examples/openpose/openpose.bin --video /Users/stuartrobinson/repos/computervision/andre_aigassi/images/tennis_video/stanford_19sec_clip_hifi.mov --write_video /Users/stuartrobinson/repos/computervision/andre_aigassi/images/tennis_video/out/stanford_19hifi/poses.avi --write_json /Users/stuartrobinson/repos/computervision/andre_aigassi/images/tennis_video/out/stanford_19hifi
+
+
+/Users/stuartrobinson/repos/computervision/andre_aigassi/images/tennis_video/frames/stanford_19hifi/thumb00098.png
+
+./build/examples/openpose/openpose.bin --image_dir ~/repos/computervision/andre_aigassi/images/img/in --write_images ~/repos/computervision/andre_aigassi/images/img/out --write_json ~/repos/computervision/andre_aigassi/images/img/out
+
 
 
 splitting video into frames:
@@ -137,6 +146,7 @@ trying ffmpeg: https://www.bugcodemaster.com/article/extract-images-frame-frame-
 ffmpeg -i video.webm thumb%04d.jpg -hide_banner
 ffmpeg -i stanford_single_backhand.mov thumb%05d.png
 ffmpeg -i stanford_single_swing.mp4 ./frames/stanford_single_swing/thumb%05d.png
+ffmpeg -i stanford_19sec_clip_hifi.mov ./frames/stanford_19hifi/thumb%05d.png
 
 FFMPEG WORKS GREAT!!!!!!!!!!!! f yeah    
 
@@ -174,3 +184,94 @@ now, how to segment in higher quality?  png instead of jpg
 
 compare pose results (to find the closer tennis player) by comparing distance between points 1 and 8 -- neck and midhip. 
 3 elements per bodypart (x, y, strength?)
+
+avoid github pw: https://stackoverflow.com/a/28562679/8870055
+
+
+TODO:
+
+
+zooming out to find tennis ball and racket
+  if 'sport ball' not in class_namez or 'tennis racket' not in class_namez or 'baseball bal' not in class_namez:
+        # crop image left or right depending on where right hand is.
+        # cropping looks easy!!!! just take subset of img - from img_to_array
+        # the dimensions of this numpy array match the image dimensions!  :)
+
+        # first do smallest crop of player box plus box-size areas left and right (start with the side of right hand)
+        # then keep expanding toward the center of the image.
+        # then expand everything 25% north. then left and right. then 50% north
+
+        # just tedious arithmetic to add newly-found objects to main photo size.
+        # what if two different balls or rackets are found?  (without overlapping boxes?) keep the one closest to main player
+        #   ADVANCED - keep the ball most in-line with ball coordinate in surrounding images.
+
+        # and then save this stuff as numpy arrays.
+        # later, we figure out how to trace tennis ball and racket on screen.  getting closest/farthest racket points from player shoulder etc
+
+        # check out save_image for image-drawing tips
+        # draw lightning pointing to ball hitting racket ? detect hit instant when ball is visible through the racket. or very close
+
+        # the FIRST frame where ball is visible through racket
+
+        # to find farthest racket and closest racket points, look in concentric circles radiating from shoulder point
+        # how to draw curve from points?
+        # https://stackoverflow.com/questions/5283649/plot-smooth-line-with-pyplot
+        # http://benpaulthurstonblog.blogspot.com/2013/07/smooth-curve-generator-implemented-in.html
+        # not python: http://what-when-how.com/advanced-methods-in-computer-graphics/curves-and-surfaces-advanced-methods-in-computer-graphics-part-5/
+        # spline?  https://gamedev.stackexchange.com/questions/38622/how-to-create-a-curve-from-a-set-of-points-that-passes-through-said-points
+        # cubic spline? catmull-rom spline -- yes cubic!  found lots of resources
+        #
+        # drawing circles:
+        # https://www.google.com/search?q=python+plot+circle+in+image+ndarray&oq=python+plot+circle+in+image+ndarray&aqs=chrome..69i57.10939j0j7&sourceid=chrome&ie=UTF-8
+        # https://stackoverflow.com/questions/34902477/drawing-circles-on-image-with-matplotlib-and-numpy
+        #
+        # to get tennis ball actual width - find center of ball mask - and then find the closest border mask pixel.  to control for blur.
+        pass
+
+
+https://scipy-lectures.org/intro/numpy/operations.html random pretty colors
+
+
+SLIGHT CHANGE OF PLANS-
+openpose did a bad job getting poses from video.  for frame 98 (starting from 1), it listed 0's for right wrist and elbow coordinates
+BUT, those parts were visibly highlighted in the respective video frame.
+
+so -- don't do openpose from video.  do on individual frames.
+
+rename folder naming convention cos confusing rn.
+
+1. split into frames
+
+ffmpeg -i 19sec.mov ./frames/raw/19sec/%06d.png
+ffmpeg -i backhand.mov ./frames/raw/backhand/%06d.png
+ffmpeg -i forehand.mp4 ./frames/raw/forehand/%06d.png
+
+2.  get pose data
+
+./build/examples/openpose/openpose.bin \
+--image_dir ~/repos/computervision/andre_aigassi/images/tennis_video/frames/raw/backhand \
+--write_images ~/repos/computervision/andre_aigassi/images/tennis_video/frames/pose/img/backhand \
+--write_json ~/repos/computervision/andre_aigassi/images/tennis_video/frames/pose/data/backhand
+
+./build/examples/openpose/openpose.bin \
+--image_dir ~/repos/computervision/andre_aigassi/images/tennis_video/frames/raw/forehand \
+--write_images ~/repos/computervision/andre_aigassi/images/tennis_video/frames/pose/img/forehand \
+--write_json ~/repos/computervision/andre_aigassi/images/tennis_video/frames/pose/data/forehand
+
+./build/examples/openpose/openpose.bin \
+--image_dir ~/repos/computervision/andre_aigassi/images/tennis_video/frames/raw/19sec \
+--write_images ~/repos/computervision/andre_aigassi/images/tennis_video/frames/pose/img/19sec \
+--write_json ~/repos/computervision/andre_aigassi/images/tennis_video/frames/pose/data/19sec
+
+./build/examples/openpose/openpose.bin \
+--image_dir ~/repos/computervision/andre_aigassi/images/tennis_video/frames/raw/19sec_5 \
+--write_images ~/repos/computervision/andre_aigassi/images/tennis_video/frames/pose/img/19sec \
+--write_json ~/repos/computervision/andre_aigassi/images/tennis_video/frames/pose/data/19sec
+
+ugh - openpose hangs forever when image_dir too big.  i split up 19sec into 5 diff folders. 19sec_1 etc
+
+
+
+
+
+

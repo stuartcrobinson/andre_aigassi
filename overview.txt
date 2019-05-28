@@ -23,5 +23,12 @@ openpose - slow but excellent.  will prob need p2 to render 19 second clip.  too
 
 maskrcnn - great for object location and segmenetation.  discovered through recent brownlee article.
             - segmentation is sloppy even for obvious stuff
-            use this for tennis ball tracking and tennis racket tracking            
+            use this for tennis ball tracking and tennis racket tracking
+
+
+
+
+
+detectron - https://ai.facebook.com/tools/detectron
+            - might be better than standalone maskrcnn.  investigate later.
 

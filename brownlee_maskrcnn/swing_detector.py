@@ -157,6 +157,19 @@ def getRacketProxAndDist(x):
     return proximalCoords, distalCoords
 
 
+def getrWristToFeetOver300(r, playerPoses):
+    i = r.name
+    pose = playerPoses[i]
+    rWristCoords = ex4.getBodyPartCoordinates(ex4.rightWristNumber, pose)
+    if rWristCoords[0] == 0:
+        return False
+    rFootCoords = ex4.getBodyPartCoordinates(ex4.rightFootNumber, pose)
+    lFootCoords = ex4.getBodyPartCoordinates(ex4.leftFootNumber, pose)
+    distRfoot = distance.euclidean(rWristCoords, rFootCoords)
+    distLfoot = distance.euclidean(rWristCoords, lFootCoords)
+    return distRfoot > 300 and distLfoot > 300
+
+
 def getTbInR(x, tbBoxes, racketBoxes):
     i = x.name
     tbBox = tbBoxes[i]
@@ -262,9 +275,9 @@ for i in range(len(df['rdΔ1'])):
         # print(True)
         racketDistDelta2 = df['rdΔ2'].values[i]
         if not pd.isna(racketDistDelta2):
-            df['rdΔ1_est'].values[i] = racketDistDelta2/2
-            if i > 0 and pd.isna(df['rdΔ1_est'].values[i-1]):
-                df['rdΔ1_est'].values[i-1] = racketDistDelta2/2
+            df['rdΔ1_est'].values[i] = racketDistDelta2 / 2
+            if i > 0 and pd.isna(df['rdΔ1_est'].values[i - 1]):
+                df['rdΔ1_est'].values[i - 1] = racketDistDelta2 / 2
 
 for i in range(len(df['rdΔ1'])):
     # print(i)
@@ -274,12 +287,11 @@ for i in range(len(df['rdΔ1'])):
         # print(True)
         racketDistDelta3 = df['rdΔ3'].values[i]
         if not pd.isna(racketDistDelta3):
-            df['rdΔ1_est'].values[i] = racketDistDelta3/3
-            if i > 0 and pd.isna(df['rdΔ1_est'].values[i-1]):
-                df['rdΔ1_est'].values[i-1] = racketDistDelta3/3
-            if i > 1 and pd.isna(df['rdΔ1_est'].values[i-2]):
-                df['rdΔ1_est'].values[i-2] = racketDistDelta3/3
-
+            df['rdΔ1_est'].values[i] = racketDistDelta3 / 3
+            if i > 0 and pd.isna(df['rdΔ1_est'].values[i - 1]):
+                df['rdΔ1_est'].values[i - 1] = racketDistDelta3 / 3
+            if i > 1 and pd.isna(df['rdΔ1_est'].values[i - 2]):
+                df['rdΔ1_est'].values[i - 2] = racketDistDelta3 / 3
 
 for i in range(len(df['rdΔ1'])):
     # print(i)
@@ -289,15 +301,13 @@ for i in range(len(df['rdΔ1'])):
         # print(True)
         racketDistDelta4 = df['rdΔ4'].values[i]
         if not pd.isna(racketDistDelta4):
-            df['rdΔ1_est'].values[i] = racketDistDelta4/4
-            if i > 0 and pd.isna(df['rdΔ1_est'].values[i-1]):
-                df['rdΔ1_est'].values[i-1] = racketDistDelta4/4
-            if i > 1 and pd.isna(df['rdΔ1_est'].values[i-2]):
-                df['rdΔ1_est'].values[i-2] = racketDistDelta4/4
-            if i > 2 and pd.isna(df['rdΔ1_est'].values[i-3]):
-                df['rdΔ1_est'].values[i-3] = racketDistDelta4/4
-
-
+            df['rdΔ1_est'].values[i] = racketDistDelta4 / 4
+            if i > 0 and pd.isna(df['rdΔ1_est'].values[i - 1]):
+                df['rdΔ1_est'].values[i - 1] = racketDistDelta4 / 4
+            if i > 1 and pd.isna(df['rdΔ1_est'].values[i - 2]):
+                df['rdΔ1_est'].values[i - 2] = racketDistDelta4 / 4
+            if i > 2 and pd.isna(df['rdΔ1_est'].values[i - 3]):
+                df['rdΔ1_est'].values[i - 3] = racketDistDelta4 / 4
 
 for i in range(len(df['rdΔ1'])):
     # print(i)
@@ -307,35 +317,40 @@ for i in range(len(df['rdΔ1'])):
         # print(True)
         racketDistDelta5 = df['rdΔ5'].values[i]
         if not pd.isna(racketDistDelta5):
-            df['rdΔ1_est'].values[i] = racketDistDelta5/5
-            if i > 0 and pd.isna(df['rdΔ1_est'].values[i-1]):
-                df['rdΔ1_est'].values[i-1] = racketDistDelta5/5
-            if i > 1 and pd.isna(df['rdΔ1_est'].values[i-2]):
-                df['rdΔ1_est'].values[i-2] = racketDistDelta5/5
-            if i > 2 and pd.isna(df['rdΔ1_est'].values[i-3]):
-                df['rdΔ1_est'].values[i-3] = racketDistDelta5/5
-            if i > 3 and pd.isna(df['rdΔ1_est'].values[i-4]):
-                df['rdΔ1_est'].values[i-4] = racketDistDelta5/5
-
+            df['rdΔ1_est'].values[i] = racketDistDelta5 / 5
+            if i > 0 and pd.isna(df['rdΔ1_est'].values[i - 1]):
+                df['rdΔ1_est'].values[i - 1] = racketDistDelta5 / 5
+            if i > 1 and pd.isna(df['rdΔ1_est'].values[i - 2]):
+                df['rdΔ1_est'].values[i - 2] = racketDistDelta5 / 5
+            if i > 2 and pd.isna(df['rdΔ1_est'].values[i - 3]):
+                df['rdΔ1_est'].values[i - 3] = racketDistDelta5 / 5
+            if i > 3 and pd.isna(df['rdΔ1_est'].values[i - 4]):
+                df['rdΔ1_est'].values[i - 4] = racketDistDelta5 / 5
 
 df['rdΔ1μ4_est'] = df['rdΔ1_est'].rolling(4, min_periods=2).mean()
 
 # df.query('tbInR > 0')
 
-
 side6ago = df['racket_side'].shift(6)
 df['sideswitched'] = df['racket_side'] != side6ago
 
+df['rWristToFeetOver300'] = df.apply(lambda x: getrWristToFeetOver300(x, playerPoses), axis=1)
+df['rWristToFeetOver300Recent'] = df['rWristToFeetOver300'] | df['rWristToFeetOver300'].shift(1) | df['rWristToFeetOver300'].shift(2) | \
+                                  df['rWristToFeetOver300'].shift(3) | df['rWristToFeetOver300'].shift(4) | df['rWristToFeetOver300'].shift(5) | df['rWristToFeetOver300'].shift(6)
+
+
 def encodeSwingType(r):
-    if r['sideswitched'] == True and r['rdΔ1μ4_est'] > 55:
+    if r['sideswitched'] == True and r['rdΔ1μ4_est'] > 50:
+        if r['rWristToFeetOver300Recent']:
+            return 'Serve'
         if r['racket_side'] == 'right':
             return 'Backhand'
         if r['racket_side'] == 'left':
             return 'Forehand'
     return None
 
-df['swing'] = df.apply(lambda r: encodeSwingType(r), axis=1)
 
+df['swing'] = df.apply(lambda r: encodeSwingType(r), axis=1)
 
 df['tbRadiusAndCoords'] = df.apply(lambda x: getTennisBallRadiusAndCoordinates(x, tbBoxes), axis=1)
 
@@ -343,8 +358,8 @@ df[['tbRadius', 'tbx0', 'tby0']] = pd.DataFrame(df['tbRadiusAndCoords'].tolist()
 
 df = df.drop(errors='ignore',
              columns=['tbx', 'tby', 'rdx1', 'rdx2', 'rdx3', 'rdx4', 'rdx5', 'rdy2', 'rdy4', 'rpx1', 'rpx3', 'rpx5', 'rdy1', 'rdy3', 'rdy5', 'rpy1', 'rpy3', 'rpy5', 'tbRadiusAndCoords', 'racket_distal_delta_1', 'racket_distal_delta_3',
-                      'racket_distal_delta_5'])
-
+                      'racket_distal_delta_5', 'sideswitched', 'rdΔ1', 'rdΔ2', 'rdΔ3', 'rdΔ4', 'rdΔ5', 'rdΔ1μ6', 'rdΔ1_est', 'tbInR', 'rpx0', 'rpy0', 'rdx0', 'rdy0', 'rdΔ1μ4_est'])
+del side6ago
 
 df['tbx1'] = df['tbx0'].shift(1)
 df['tbx2'] = df['tbx0'].shift(2)

@@ -103,6 +103,8 @@ midHipPartNumber = m_bodyPart_i['MidHip']
 rightWristNumber = m_bodyPart_i['RWrist']
 rightElbowNumber = m_bodyPart_i['RElbow']
 rightShoulderNumber = m_bodyPart_i['RShoulder']
+rightFootNumber =  m_bodyPart_i['RAnkle']
+leftFootNumber =  m_bodyPart_i['LAnkle']
 
 
 def getReadablePose(pose):
@@ -180,7 +182,7 @@ def getBiggestMrcnnPerson(r):
 
 
 def getRightHandSide(pose):
-    midHipCoordinates = getBodyPartCoordinates(midHipPartNumber, pose)
+    midHipCoordinates = getBodyPartCoordinates(neckPartNumber, pose)    #changed from hip
     rWristCoord = getBodyPartCoordinates(rightWristNumber, pose)
     if not midHipCoordinates[0] > 0:
         raise Exception('cant estimate mid hip location')

@@ -220,23 +220,71 @@ start = time.time()
 df['racket_proxAndDist'] = df.apply(lambda x: getRacketProxAndDist(x), axis=1)
 print("elapsed time: ", time.time() - start)
 df[['racket_proximal', 'racket_distal']] = pd.DataFrame(df['racket_proxAndDist'].tolist(), index=df.index)
-df = df.drop(columns='racket_proxAndDist')
+df[['rackProxX', 'rackProxY']] = pd.DataFrame(df['racket_proximal'].tolist(), index=df.index)
+df[['rackDistX', 'rackDistY']] = pd.DataFrame(df['racket_distal'].tolist(), index=df.index)
+df = df.drop(columns=['racket_proxAndDist', 'racket_proximal', 'racket_distal'])
 
-for i in range(numFrames):
-    print(i)
-    frameNumber = i + 1
-    pose = playerPoses[i]
-    # r = np.load(ex4.getMrcnnDataPath(videoName, frameNumber)).item()
-    # racketMrcnn = ex4.getBestFromMrcnn(ex4.TENNIS_RACKET, r)
-    # racketMask = racketMrcnn['mask'] if 'mask' in racketMrcnn else None
-    racketMask = racketMasks[i]
-    proximalCoords, distalCoords = getRacketExtremeCoords(racketMask,
-                                                          ex4.getBodyPartCoordinates(ex4.rightWristNumber, pose),
-                                                          ex4.getBodyPartCoordinates(ex4.rightElbowNumber, pose),
-                                                          ex4.getBodyPartCoordinates(ex4.rightShoulderNumber, pose))
-    analysis[i]['racket_distal'] = distalCoords
-    analysis[i]['racket_proximal'] = proximalCoords
-    # elapsed time:  14.363679885864258
+df['rd0'] = df['racket_proximal']
+df['rd1'] = df['racket_proximal'].shift(1)
+df['rd3'] = df['racket_proximal'].shift(3)
+df['rd5'] = df['racket_proximal'].shift(5)
+
+import math
+
+
+def distLam(p1, p2):
+    x1 = p1[0]
+    y1 = p1[1]
+    x2 = p2[0]
+    y2 = p2[1]
+    if p1 is None or p2 is None:
+        return None
+    if x1 is None or x2 is None or y1 is None or y2 is None:
+        return None
+    return math.sqrt(((p1[0] - p2[0]) ** 2) + ((p1[1] - p2[1]) ** 2))
+
+
+def distLam2(p1, p2):
+    (x1, y1) = p1
+    (x2, y2) = p2
+    if x1 is None or x2 is None or y1 is None or y2 is None:
+        return None
+    # return x1 + x2 + y1 + y2
+    return p1
+
+
+def distLam3(p1, p2, x1, y1, x2, y2):
+    if p1 is None or p2 is None or x1 is None or x2 is None or y1 is None or y2 is None:
+        return None
+    return p1
+
+
+def distancer(x):
+    if x[0] is not None:
+        return x[0][0]
+    else:
+        return None
+
+rd0 = df['racket_proximal']
+rd1 = df['racket_proximal'].shift(1)
+rd3 = df['racket_proximal'].shift(3)
+rd5 = df['racket_proximal'].shift(5)
+df['x1'] = 0
+df['y1'] = 0
+df['x2'] = None
+df['y2'] = 5
+# df['racket_distal_delta_1'] = distance.euclidean(rd0, rd1)
+df['racket_distal_delta_1'] = df.apply(lambda x: distance.euclidean(x.rd0, x.rd1) if x.rd0 is not None and x.rd1 is not None else None, axis=1)
+df['racket_distal_delta_1'] = df.apply(lambda x: x.rd0 if x.rd0 is not None and x.rd1 is not None else None, axis=1)
+df['racket_distal_delta_1'] = df.apply(lambda x: distLam(x.rd0, x.rd1), axis=1)
+df['racket_distal_delta_1'] = df.apply(lambda x: distLam2(x.rd0, x.rd1), axis=1)
+df['racket_distal_delta_1'] = df.apply(lambda x: distLam3(x.rd0, x.rd1, x.rd1[0], x.rd1[0], x.rd1[0], x.rd1[0]), axis=1)
+df['racket_distal_delta_1'] = df['racket_proxAndDist'].apply(distancer)
+# df['racket_distal_delta_1'] = df[['racket_proximal','racket_distal'].apply(distancer)
+df['racket_distal_delta_1'] = df.apply(lambda x: distLam((0, 0), (5, 5)), axis=1)
+df['racket_distal_delta_1'] = df.apply(lambda x: distLam((x.x1, x.y1), (x.x2, x.y2)), axis=1)
+# df['racket_distal_delta_1'] = df.apply(lambda x: distance.euclidean(rd0, rd1))
+
 
 for i in range(5, numFrames):
     if 'racket_distal' not in analysis[i]:

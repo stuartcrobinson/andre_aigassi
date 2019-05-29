@@ -434,19 +434,23 @@ df['isBallTrackStart'].values[575] = True
 # lets start by just drawing line for the next 20 frames.
 # make a map of key: start frame, value: arc
 
-arcs = {}
-from scipy.interpolate import CubicSpline
+from scipy import interpolate
 
+tcks = {}
+
+count = 0
 for i in range(30, len(df) - 1):
-    if df['isBallTrackStart'].values[i] == True:
-        X = df['bx'].loc[i:i + 20]
-        Y = df['by'].loc[i:i + 20]
-        X_e = df['bx_e'].loc[i:i + 20]
-        Y_e = df['by_e'].loc[i:i + 20]
-        cs = CubicSpline(x, y)
+    if df['isBallTrackStart'].values[i]:
+        count += 1
+        X = df['bx'].loc[i:i + 20].dropna().tolist()
+        Y = df['by'].loc[i:i + 20].dropna().tolist()
+        # print(X)
+        # X_e = df['bx_e'].loc[i:i + 20].dropna().tolist()
+        # Y_e = df['by_e'].loc[i:i + 20].dropna().tolist()
+        tcks[i] = interpolate.splrep(X, Y)
+
 
 # https://stackoverflow.com/a/31544486/8870055
-from scipy import interpolate
 
 
 def f(x):
@@ -493,9 +497,9 @@ print("alpha={}, beta={}".format(alpha, 1 - alpha))
 # cv2.waitKey(0)
 cv2.imwrite('cvout.png', output)
 
-#mask? https://stackoverflow.com/questions/10469235/opencv-apply-mask-to-a-color-image/38493075
+# mask? https://stackoverflow.com/questions/10469235/opencv-apply-mask-to-a-color-image/38493075
 
-#TODO - plan:  make map of splines per starting frame - spline represnted by tck (see above)
+# TODO - plan:  make map of splines per starting frame - spline represnted by tck (see above)
 # use tck in a function to get y value per x.
 # draw a circle per point on the line http://www.swarthmore.edu/NatSci/mzucker1/opencv-2.4.10-docs/modules/core/doc/drawing_functions.html
 # same radius per circle for now (well, use the tennis ball radius as segmented

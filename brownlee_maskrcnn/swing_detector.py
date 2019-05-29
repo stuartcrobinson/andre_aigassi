@@ -421,7 +421,7 @@ for i in range(30, len(df) - 1):
             df['bye'].values[i - 3] = yNext - 4 * y_lenPer
 
 df['isBallTrackStart'] = False
-df['isBallTrackStart'].values[47] = True
+df['isBallTrackStart'].values[46] = True
 df['isBallTrackStart'].values[106] = True
 df['isBallTrackStart'].values[186] = True
 df['isBallTrackStart'].values[262] = True
@@ -495,23 +495,61 @@ def getRadius(x):
     return df.query(f'f <= {frame} and f >= {startFrame}').sort_values('bx').query(f'bx <= {x + 10}').tail(1)['bRadius'].values[0]
 
 
-frame = 267
-inputImage = ex4.getMrcnnImgPath("19sec", frame)
+# def apply_mask(image, mask, color, alpha=0.5):
+#     """Apply the given mask to the image.
+#     """
+#     for c in range(3):
+#         image[:, :, c] = np.where(mask == 1,
+#                                   image[:, :, c] * (1 - alpha) + alpha * color[c] * 255,
+#                                   image[:, :, c])
+#     return image
+
+def apply_mask(image, originalImage, mask):
+    """Apply the given mask to the image.
+    """
+    for c in range(3):
+        image[:, :, c] = np.where(mask == 1,
+                                  originalImage[:, :, c],
+                                  image[:, :, c])
+    return image
+
+
+###############################################################################################
+###############################################################################################
+###############################################################################################
+###############################################################################################
+###############################################################################################
+###############################################################################################
+###############################################################################################
+###############################################################################################
+###############################################################################################
+###############################################################################################
+
+frame = 50
+# inputImage = ex4.getMrcnnImgPath("19sec", frame)
+inputImage = ex4.getRawImgPath("19sec", frame)
 image = cv2.imread(inputImage)
-alpha = 0.8
+alpha = 0.5
 overlay = image.copy()
 output = image.copy()
 
 # cv2.rectangle(overlay, (420, 205), (595, 385), (0, 0, 255), -1)
-cv2.rectangle(overlay, (820, 405), (695, 785), (255, 0, 255), -1)
+# cv2.rectangle(overlay, (820, 405), (695, 785), (255, 0, 255), -1)
 
 startFrame = getStartFrameForFrame(frame)
 
 spline = splines[startFrame]
 
+r = np.load(ex4.getMrcnnDataPath(videoName, frame)).item()
+personMrcnn = ex4.getBestFromMrcnn(ex4.PERSON, r)  # same as biggest i guess??
+personMask = personMrcnn['mask']
+
 bx = df.query(f'f == {frame}')['bx'].values[0]
 by = df.query(f'f == {frame}')['by'].values[0]
 swing = df.query(f'f == {frame}')['swing'].values[0]
+
+splineXMin = min(int(spline["X"][0]), int(spline["X"][len(spline["X"]) - 1]))
+splineXMax = max(int(spline["X"][0]), int(spline["X"][len(spline["X"]) - 1]))
 
 minx = min(int(spline["X"][0]), int(bx))
 maxx = max(int(spline["X"][0]), int(bx))
@@ -529,18 +567,41 @@ print("Line Solution is y = {m}x + {c}".format(m=m, c=c))
 def getRadiusFunction(x):
     return m * x + c
 
+if frame - startFrame < 20:
+    for x in range(minx, maxx):
+        if x >= splineXMax or x <= splineXMin:
+            continue
+        tck = spline["tck"]
+        y = int(interpolate.splev(x, tck))
+        radius = int(getRadiusFunction(x))
+        print(x, y, radius)
+        cv2.circle(overlay, (x, y), radius, (255, 255, 0))
 
-for x in range(minx, maxx):
-    tck = spline["tck"]
-    y = int(interpolate.splev(x, tck))
-    radius = int(getRadiusFunction(x))
-    print(x, y, radius)
-    cv2.circle(overlay, (x, y), radius, (255, 255, 0))
+#
+# frame = 190
+# # inputImage = ex4.getMrcnnImgPath("19sec", frame)
+# inputImage = ex4.getRawImgPath("19sec", frame)
+# image = cv2.imread(inputImage)
+# alpha = 0.5
+# overlay = image.copy()
+# output = image.copy()
+
 
 width = image.shape[1]
 height = image.shape[0]
-cv2.rectangle(overlay, (image.shape[1] - 495, 0), (image.shape[1], 40), (100, 100, 100), -1)
-cv2.putText(overlay, "Stuart Robinson, Durham NC", (width - 480, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 3)
+# cv2.rectangle(overlay, (width - 495, height - 40), (width, height - 40), (255, 255, 255), -1)
+cv2.putText(overlay, "Stuart Robinson, Durham NC", (width - 480, height - 20), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 3)
+cv2.putText(overlay, "STATS", (470, 500), cv2.FONT_HERSHEY_SIMPLEX, 4, (50, 50, 50), 3)
+
+# cv2.rectangle(overlay, (image.shape[1] - 495, 0), (image.shape[1], 40), (255, 255, 255), -1)
+# cv2.putText(overlay, "Stuart Robinson, Durham NC", (width - 480, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 3)
 cv2.putText(overlay, swing, (30, image.shape[0] - 40), cv2.FONT_HERSHEY_SIMPLEX, 3.0, (255, 255, 255), 3)
+
+overlay = apply_mask(overlay, image, personMask)
+
 cv2.addWeighted(overlay, alpha, output, 1 - alpha, 0, output)
 cv2.imwrite('cvout.png', output)
+
+
+#TODO - render each raw frame!!!
+# remember previous one's overlay.  if current frame doesn't have contrail, use prev frame's contrail and swing word

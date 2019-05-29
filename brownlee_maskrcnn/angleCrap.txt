@@ -73,3 +73,129 @@ df['bd3'] = df.apply(lambda r: distLam(r.bx4, r.by4, r.bx0, r.by0), axis=1)
 
 
 # lets make everytyhig fresh
+
+
+
+fuck this
+
+
+
+df['bxe1'] = df['bxe'].shift(1)
+df['bye1'] = df['bye'].shift(1)
+df['bxe2'] = df['bxe'].shift(2)
+df['bye2'] = df['bye'].shift(2)
+df['bxe3'] = df['bxe'].shift(3)
+df['bye3'] = df['bye'].shift(3)
+df['bxe4'] = df['bxe'].shift(4)
+df['bye4'] = df['bye'].shift(4)
+df['bxe5'] = df['bxe'].shift(5)
+df['bye5'] = df['bye'].shift(5)
+
+
+# VECTORS
+# https://stackoverflow.com/questions/17332759/finding-vectors-with-2-points
+# https://stackoverflow.com/a/18514434/8870055 dealing with points and vectors and functions
+
+def unit_vector(vector):
+    """ Returns the unit vector of the vector.  """
+    return vector / np.linalg.norm(vector)
+
+
+def angle_between(v1, v2):
+    """ Returns the angle in radians between vectors 'v1' and 'v2'::
+            # >>> angle_between((1, 0, 0), (0, 1, 0))
+            # 1.5707963267948966
+            # >>> angle_between((1, 0, 0), (1, 0, 0))
+            # 0.0
+            # >>> angle_between((1, 0, 0), (-1, 0, 0))
+            3.141592653589793
+    """
+    v1_u = unit_vector(v1)
+    v2_u = unit_vector(v2)
+    return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
+
+
+def vec(x1, y1, x2, y2):
+    if pd.isna(x1) or pd.isna(y1) or pd.isna(x2) or pd.isna(y2):
+        return np.array([x2 - x1, y2 - y1])
+    return np.array([x2 - x1, y2 - y1]);
+
+
+df['ba0'] = df.apply(lambda r: angle_between(vec(r.bxe2, r.bye2, r.bxe1, r.bye1), vec(r.bxe1, r.bye1, r.bxe, r.bye)), axis=1)
+df['ba1'] = df.apply(lambda r: angle_between(vec(r.bxe3, r.bye3, r.bxe2, r.bye2), vec(r.bxe2, r.bye2, r.bxe1, r.bye1)), axis=1)
+df['ba2'] = df.apply(lambda r: angle_between(vec(r.bxe4, r.bye4, r.bxe3, r.bye3), vec(r.bxe3, r.bye3, r.bxe2, r.bye2)), axis=1)
+df['ba3'] = df.apply(lambda r: angle_between(vec(r.bxe5, r.bye5, r.bxe4, r.bye4), vec(r.bxe4, r.bye4, r.bxe3, r.bye3)), axis=1)
+
+df['bd0'] = df.apply(lambda r: distLam(r.bxe1, r.bye1, r.bxe, r.bye), axis=1)
+df['bd1'] = df.apply(lambda r: distLam(r.bxe2, r.bye2, r.bxe, r.bye), axis=1)
+df['bd2'] = df.apply(lambda r: distLam(r.bxe3, r.bye3, r.bxe, r.bye), axis=1)
+df['bd3'] = df.apply(lambda r: distLam(r.bxe4, r.bye4, r.bxe, r.bye), axis=1)
+
+
+# df.loc[df['bd0'] > 60 and df['swing'] is None, ['bx', 'by']] = np.NaN
+#
+# df['bx'] = df['bx'] if (df['bd0'] > 60) & (df['swing'] is None) else None
+
+def lamb(r):
+    if r.bd0 > 60 and r.swing != r.swing:
+        return None
+    else:
+        return r.bx
+
+
+df['bx'] = df.apply(lambda r: lamb)
+
+# df[['bRadius', 'bx', 'by']] = pd.DataFrame(df['bRadiusAndCoords'].tolist(), index=df.index)
+
+
+df.query('bd0 > 60 and swing != swing')
+df.query('bd0 > 60')
+
+
+
+
+
+image crap:
+
+# inputImage = '/Users/stuartrobinson/repos/computervision/andre_aigassi/images/Screen Shot 2019-05-28 at 8.59.26 pm.png'
+# inputImage = '/Users/stuartrobinson/repos/computervision/andre_aigassi/images/tennis_video/frames/raw/19sec/000052.png'
+inputImage = '/Users/stuartrobinson/repos/computervision/andre_aigassi/images/tennis_video/frames/segment/img/19sec/000418.png'
+
+# load the image
+image = cv2.imread(inputImage)
+# loop over the alpha transparency values
+# for alpha in np.arange(0, 1.1, 0.1)[::-1]:
+
+alpha = 0.5
+alpha2 = 1
+# create two copies of the original image -- one for
+# the overlay and one for the final output image
+overlay = image.copy()
+overlay2 = image.copy()
+output = image.copy()
+#
+# draw a red rectangle surrounding Adrian in the image
+# along with the text "PyImageSearch" at the top-left
+# corner
+cv2.rectangle(overlay, (420, 205), (595, 385), (0, 0, 255), -1)
+cv2.rectangle(overlay, (820, 405), (695, 785), (255, 0, 255), -1)
+cv2.putText(overlay2, "PyImageSearch: alpha={}".format(alpha), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, .0, (0, 0, 255), 3)
+# apply the overlay
+cv2.addWeighted(overlay, alpha, output, 1 - alpha, 0, output)
+cv2.addWeighted(overlay2, alpha2, output, 1 - alpha2, 0, output)
+# show the output image
+print("alpha={}, beta={}".format(alpha, 1 - alpha))
+# cv2.imshow("Output", output)
+# cv2.waitKey(0)
+cv2.imwrite('cvout.png', output)
+
+# mask? https://stackoverflow.com/questions/10469235/opencv-apply-mask-to-a-color-image/38493075
+
+# TODO - plan:  make map of splines per starting frame - spline represnted by tck (see above)
+# use tck in a function to get y value per x.
+# draw a circle per point on the line http://www.swarthmore.edu/NatSci/mzucker1/opencv-2.4.10-docs/modules/core/doc/drawing_functions.html
+# same radius per circle for now (well, use the tennis ball radius as segmented
+# per frame, get the expected coordinate of ball.  draw the line from starting coordinates over to that coordinate
+# hold the contrail on the page.  after it's finished, start rapidly fading out per frame.  to be gone well before next hit
+
+# figure out masks to put contrail on other side of player and racket

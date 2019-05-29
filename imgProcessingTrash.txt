@@ -1,0 +1,149 @@
+
+# dont use expected coordinates for plotting the arc!  only to know how far out to draw it per frame
+
+# lets start by just drawing line for the next 20 frames.
+# make a map of key: start frame, value: arc
+
+arcs = {}
+from scipy.interpolate import CubicSpline
+
+for i in range(30, len(df) - 1):
+    if df['isBallTrackStart'].values[i] == True:
+        X = df['bx'].loc[i:i + 20]
+        Y = df['by'].loc[i:i + 20]
+        X_e = df['bx_e'].loc[i:i + 20]
+        Y_e = df['by_e'].loc[i:i + 20]
+        cs = CubicSpline(x, y)
+
+        # now what ....
+
+from scipy.interpolate import CubicSpline
+import matplotlib.pyplot as plt
+
+x = np.arange(10)
+y = np.sin(x)
+cs = CubicSpline(x, y)
+xs = np.arange(-0.5, 9.6, 0.1)
+plt.figure(figsize=(6.5, 4))
+plt.plot(x, y, 'o', label='data')
+plt.plot(xs, np.sin(xs), label='true')
+plt.plot(xs, cs(xs), label="S")
+plt.plot(xs, cs(xs, 1), label="S'")
+plt.plot(xs, cs(xs, 2), label="S''")
+plt.plot(xs, cs(xs, 3), label="S'''")
+plt.xlim(-0.5, 9.5)
+plt.legend(loc='lower left', ncol=2)
+plt.show()
+
+# https://stackoverflow.com/a/31544486/8870055
+from scipy import interpolate
+
+
+def f(x):
+    x_points = [0, 1, 2, 3, 4, 5]
+    y_points = [12, 14, 22, 39, 58, 77]
+    #
+    tck = interpolate.splrep(x_points, y_points)
+    return interpolate.splev(x, tck)
+
+
+print(f(1.25))
+
+inputImage = '/Users/stuartrobinson/repos/computervision/andre_aigassi/images/Screen Shot 2019-05-28 at 8.59.26 pm.png'
+# inputImage = '/Users/stuartrobinson/repos/computervision/andre_aigassi/images/tennis_video/frames/raw/19sec/000052.png'
+
+from PIL import Image, ImageDraw
+
+# https://kite.com/python/examples/3195/pil-draw-lines-on-an-image
+im = Image.open(inputImage)
+
+d = ImageDraw.Draw(im, 'RGBA')
+
+top = (150, 50)
+left = (100, 125)
+right = (200, 125)
+
+line_color = (0, 0, 255, 100)
+
+d.line([top, left, right, top], fill=line_color, width=2)
+d.arc(xy=[(100, 100), (400, 200)], start=0, end=288, fill=line_color)
+
+d.chord(xy=[(1000, 1000), (4000, 2000)], start=0, end=288, fill=line_color, outline=line_color)
+
+im.save("/Users/stuartrobinson/repos/computervision/andre_aigassi/images/drawn_grid.png")
+
+# img = Image.new('RGB', (100, 100))
+img = Image.open(inputImage)
+
+drw = ImageDraw.Draw(img)
+# drw = ImageDraw.Draw(img, 'RGBA')
+drw.polygon([(50, 0), (100, 100), (0, 100)], (255, 0, 0, 125))
+drw.polygon([(50, 100), (100, 0), (0, 0)], (0, 255, 0, 125))
+del drw
+
+img.save('out.png', 'PNG')
+
+#
+# draw = ImageDraw.Draw(im)
+# draw.line((0, 0) + im.size, fill=128)
+# draw.line((0, im.size[1], im.size[0], 0), fill=128)
+# del draw
+#
+# # write to stdout
+# im.save(sys.stdout, "PNG")
+
+
+# get an image
+base = Image.open(inputImage).convert('RGBA')
+
+# make a blank image for the text, initialized to transparent text color
+txt = Image.new('RGBA', base.size, (255, 255, 255, 0))
+
+# get a font
+fnt = ImageFont.truetype('Pillow/Tests/fonts/FreeMono.ttf', 40)
+# get a drawing context
+d = ImageDraw.Draw(txt)
+
+# draw text, half opacity
+d.text((10, 10), "Hello", font=fnt, fill=(255, 255, 255, 128))
+# draw text, full opacity
+d.text((10, 60), "World", font=fnt, fill=(255, 255, 255, 255))
+
+out = Image.alpha_composite(base, txt)
+
+out.show()
+
+############################
+############################
+############################
+############################
+
+import numpy as np
+import cv2
+
+# inputImage = '/Users/stuartrobinson/repos/computervision/andre_aigassi/images/Screen Shot 2019-05-28 at 8.59.26 pm.png'
+inputImage = '/Users/stuartrobinson/repos/computervision/andre_aigassi/images/tennis_video/frames/raw/19sec/000052.png'
+
+# load the image
+image = cv2.imread(inputImage)
+# loop over the alpha transparency values
+# for alpha in np.arange(0, 1.1, 0.1)[::-1]:
+
+alpha = 0.5
+# create two copies of the original image -- one for
+# the overlay and one for the final output image
+overlay = image.copy()
+output = image.copy()
+#
+# draw a red rectangle surrounding Adrian in the image
+# along with the text "PyImageSearch" at the top-left
+# corner
+cv2.rectangle(overlay, (420, 205), (595, 385), (0, 0, 255), -1)
+cv2.putText(overlay, "PyImageSearch: alpha={}".format(alpha), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 3)
+# apply the overlay
+cv2.addWeighted(overlay, alpha, output, 1 - alpha, 0, output)
+# show the output image
+print("alpha={}, beta={}".format(alpha, 1 - alpha))
+# cv2.imshow("Output", output)
+# cv2.waitKey(0)
+cv2.imwrite('cvout.png', output)

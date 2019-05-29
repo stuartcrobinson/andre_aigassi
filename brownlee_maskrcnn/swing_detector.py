@@ -3,7 +3,6 @@ import copy
 import math
 import time
 
-import numpy as np
 import pandas as pd
 from scipy.spatial import distance
 
@@ -371,65 +370,136 @@ df = df[['f', 'racket_side', 'swing']]
 
 df['bRadiusAndCoords'] = df.apply(lambda x: getTennisBallRadiusAndCoordinates(x, tbBoxes), axis=1)
 
-df[['bRadius', 'bx0', 'by0']] = pd.DataFrame(df['bRadiusAndCoords'].tolist(), index=df.index)
+df[['bRadius', 'bx', 'by']] = pd.DataFrame(df['bRadiusAndCoords'].tolist(), index=df.index)
 
-df['bx1'] = df['bx0'].shift(1)
-df['by1'] = df['by0'].shift(1)
-df['bx2'] = df['bx0'].shift(2)
-df['by2'] = df['by0'].shift(2)
-df['bx3'] = df['bx0'].shift(3)
-df['by3'] = df['by0'].shift(3)
-df['bx4'] = df['bx0'].shift(4)
-df['by4'] = df['by0'].shift(4)
+df['bx_e'] = df['bx']
+df['by_e'] = df['by']
+
+for i in range(30, len(df) - 1):
+    x = df['bx_e'].values[i]
+    y = df['by_e'].values[i]
+    xNext = df['bx_e'].values[i + 1]
+    yNext = df['by_e'].values[i + 1]
+    xPrev1 = df['bx_e'].values[i - 1]
+    yPrev1 = df['by_e'].values[i - 1]
+    xPrev2 = df['bx_e'].values[i - 2]
+    yPrev2 = df['by_e'].values[i - 2]
+    xPrev3 = df['bx_e'].values[i - 3]
+    yPrev3 = df['by_e'].values[i - 3]
+    xPrev4 = df['bx_e'].values[i - 4]
+    yPrev4 = df['by_e'].values[i - 4]
+    if pd.isna(x) and not pd.isna(xNext):
+        if not pd.isna(xPrev1):
+            df['bx_e'].values[i] = (xPrev1 + xNext) / 2
+            df['by_e'].values[i] = (yPrev1 + yNext) / 2
+        elif not pd.isna(xPrev2):
+            x_lenPer = (xNext - xPrev2) / 3
+            y_lenPer = (yNext - yPrev2) / 3
+            df['bx_e'].values[i] = xNext - x_lenPer
+            df['by_e'].values[i] = yNext - y_lenPer
+            df['bx_e'].values[i - 1] = xNext - 2 * x_lenPer
+            df['by_e'].values[i - 1] = yNext - 2 * y_lenPer
+        elif not pd.isna(xPrev3):
+            x_lenPer = (xNext - xPrev3) / 4
+            y_lenPer = (yNext - yPrev3) / 4
+            df['bx_e'].values[i] = xNext - x_lenPer
+            df['by_e'].values[i] = yNext - y_lenPer
+            df['bx_e'].values[i - 1] = xNext - 2 * x_lenPer
+            df['by_e'].values[i - 1] = yNext - 2 * y_lenPer
+            df['bx_e'].values[i - 2] = xNext - 3 * x_lenPer
+            df['by_e'].values[i - 2] = yNext - 3 * y_lenPer
+        elif not pd.isna(xPrev4):
+            x_lenPer = (xNext - xPrev4) / 5
+            y_lenPer = (yNext - yPrev4) / 5
+            df['bx_e'].values[i] = xNext - x_lenPer
+            df['by_e'].values[i] = yNext - y_lenPer
+            df['bx_e'].values[i - 1] = xNext - 2 * x_lenPer
+            df['by_e'].values[i - 1] = yNext - 2 * y_lenPer
+            df['bx_e'].values[i - 2] = xNext - 3 * x_lenPer
+            df['by_e'].values[i - 2] = yNext - 3 * y_lenPer
+            df['bx_e'].values[i - 3] = xNext - 4 * x_lenPer
+            df['by_e'].values[i - 3] = yNext - 4 * y_lenPer
+
+df['isBallTrackStart'] = False
+df['isBallTrackStart'].values[47] = True
+df['isBallTrackStart'].values[106] = True
+df['isBallTrackStart'].values[186] = True
+df['isBallTrackStart'].values[262] = True
+df['isBallTrackStart'].values[342] = True
+df['isBallTrackStart'].values[413] = True
+df['isBallTrackStart'].values[575] = True
+
+# dont use expected coordinates for plotting the arc!  only to know how far out to draw it per frame
+
+# lets start by just drawing line for the next 20 frames.
+# make a map of key: start frame, value: arc
+
+arcs = {}
+from scipy.interpolate import CubicSpline
+
+for i in range(30, len(df) - 1):
+    if df['isBallTrackStart'].values[i] == True:
+        X = df['bx'].loc[i:i + 20]
+        Y = df['by'].loc[i:i + 20]
+        X_e = df['bx_e'].loc[i:i + 20]
+        Y_e = df['by_e'].loc[i:i + 20]
+        cs = CubicSpline(x, y)
+
+# https://stackoverflow.com/a/31544486/8870055
+from scipy import interpolate
 
 
-# VECTORS
-# https://stackoverflow.com/questions/17332759/finding-vectors-with-2-points
-# https://stackoverflow.com/a/18514434/8870055 dealing with points and vectors and functions
-
-def unit_vector(vector):
-    """ Returns the unit vector of the vector.  """
-    return vector / np.linalg.norm(vector)
-
-
-def angle_between(v1, v2):
-    """ Returns the angle in radians between vectors 'v1' and 'v2'::
-            # >>> angle_between((1, 0, 0), (0, 1, 0))
-            # 1.5707963267948966
-            # >>> angle_between((1, 0, 0), (1, 0, 0))
-            # 0.0
-            # >>> angle_between((1, 0, 0), (-1, 0, 0))
-            3.141592653589793
-    """
-    v1_u = unit_vector(v1)
-    v2_u = unit_vector(v2)
-    return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
+def f(x):
+    x_points = [0, 1, 2, 3, 4, 5]
+    y_points = [12, 14, 22, 39, 58, 77]
+    #
+    tck = interpolate.splrep(x_points, y_points)
+    return interpolate.splev(x, tck)
 
 
-def vec(x1, y1, x2, y2):
-    if pd.isna(x1) or  pd.isna(y1) or  pd.isna(x2) or  pd.isna(y2):
-        return np.array([x2 - x1, y2 - y1])
-    return np.array([x2 - x1, y2 - y1]);
+print(f(1.25))
 
+import numpy as np
+import cv2
 
-# THESE ARE NOT VECTORS!  THEYRE COORDINATES!!!
+# inputImage = '/Users/stuartrobinson/repos/computervision/andre_aigassi/images/Screen Shot 2019-05-28 at 8.59.26 pm.png'
+inputImage = '/Users/stuartrobinson/repos/computervision/andre_aigassi/images/tennis_video/frames/raw/19sec/000052.png'
 
-df['ba0'] = df.apply(lambda r: angle_between(vec(r.bx2, r.by2, r.bx1, r.by1), vec(r.bx1, r.by1, r.bx0, r.by0)), axis=1)
+# load the image
+image = cv2.imread(inputImage)
+# loop over the alpha transparency values
+# for alpha in np.arange(0, 1.1, 0.1)[::-1]:
 
-df['ba0'] = df.apply(lambda r: angle_between(np.array([r.bx1, r.by1]), np.array([r.bx0, r.by0])), axis=1)
-df['ba1'] = df.apply(lambda r: angle_between(np.array([r.bx2, r.by2]), np.array([r.bx0, r.by0])), axis=1)
-df['ba2'] = df.apply(lambda r: angle_between(np.array([r.bx3, r.by3]), np.array([r.bx0, r.by0])), axis=1)
-df['ba3'] = df.apply(lambda r: angle_between(np.array([r.bx4, r.by4]), np.array([r.bx0, r.by0])), axis=1)
+alpha = 0.5
+alpha2 = 1
+# create two copies of the original image -- one for
+# the overlay and one for the final output image
+overlay = image.copy()
+overlay2 = image.copy()
+output = image.copy()
+#
+# draw a red rectangle surrounding Adrian in the image
+# along with the text "PyImageSearch" at the top-left
+# corner
+cv2.rectangle(overlay, (420, 205), (595, 385), (0, 0, 255), -1)
+cv2.rectangle(overlay, (820, 405), (695, 785), (255, 0, 255), -1)
+cv2.putText(overlay2, "PyImageSearch: alpha={}".format(alpha), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 3)
+# apply the overlay
+cv2.addWeighted(overlay, alpha, output, 1 - alpha, 0, output)
+cv2.addWeighted(overlay2, alpha2, output, 1 - alpha2, 0, output)
+# show the output image
+print("alpha={}, beta={}".format(alpha, 1 - alpha))
+# cv2.imshow("Output", output)
+# cv2.waitKey(0)
+cv2.imwrite('cvout.png', output)
 
-df['bd0'] = df.apply(lambda r: distLam(r.bx1, r.by1, r.bx0, r.by0), axis=1)
-df['bd1'] = df.apply(lambda r: distLam(r.bx2, r.by2, r.bx0, r.by0), axis=1)
-df['bd2'] = df.apply(lambda r: distLam(r.bx3, r.by3, r.bx0, r.by0), axis=1)
-df['bd3'] = df.apply(lambda r: distLam(r.bx4, r.by4, r.bx0, r.by0), axis=1)
+#mask? https://stackoverflow.com/questions/10469235/opencv-apply-mask-to-a-color-image/38493075
 
-# now what
+#TODO - plan:  make map of splines per starting frame - spline represnted by tck (see above)
+# use tck in a function to get y value per x.
+# draw a circle per point on the line http://www.swarthmore.edu/NatSci/mzucker1/opencv-2.4.10-docs/modules/core/doc/drawing_functions.html
+# same radius per circle for now (well, use the tennis ball radius as segmented
+# per frame, get the expected coordinate of ball.  draw the line from starting coordinates over to that coordinate
+# hold the contrail on the page.  after it's finished, start rapidly fading out per frame.  to be gone well before next hit
 
-
-# i have all the data??????
-
-
-# lets make everytyhig fresh
+# figure out masks to put contrail on other side of player and racket

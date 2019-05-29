@@ -10,6 +10,7 @@ from scipy.spatial import distance
 import brownlee_maskrcnn.ex4 as ex4
 
 pd.set_option("display.max_rows", 600)
+pd.set_option('display.float_format', lambda x: '%.1f' % x)
 
 # box:  y1, x1, y2, x2
 Y1 = 0
@@ -352,23 +353,34 @@ def encodeSwingType(r):
 
 df['swing'] = df.apply(lambda r: encodeSwingType(r), axis=1)
 
-df['tbRadiusAndCoords'] = df.apply(lambda x: getTennisBallRadiusAndCoordinates(x, tbBoxes), axis=1)
-
-df[['tbRadius', 'tbx0', 'tby0']] = pd.DataFrame(df['tbRadiusAndCoords'].tolist(), index=df.index)
-
 df = df.drop(errors='ignore',
              columns=['tbx', 'tby', 'rdx1', 'rdx2', 'rdx3', 'rdx4', 'rdx5', 'rdy2', 'rdy4', 'rpx1', 'rpx3', 'rpx5', 'rdy1', 'rdy3', 'rdy5', 'rpy1', 'rpy3', 'rpy5', 'tbRadiusAndCoords', 'racket_distal_delta_1', 'racket_distal_delta_3',
-                      'racket_distal_delta_5', 'sideswitched', 'rdΔ1', 'rdΔ2', 'rdΔ3', 'rdΔ4', 'rdΔ5', 'rdΔ1μ6', 'rdΔ1_est', 'tbInR', 'rpx0', 'rpy0', 'rdx0', 'rdy0', 'rdΔ1μ4_est'])
+                      'racket_distal_delta_5', 'sideswitched', 'rdΔ1', 'rdΔ2', 'rdΔ3', 'rdΔ4', 'rdΔ5', 'rdΔ1μ6', 'rdΔ1_est', 'tbInR', 'rpx0',
+                      'rpy0', 'rdx0', 'rdy0', 'rdΔ1μ4_est', 'rWristToFeetOver300', 'rWristToFeetOver300Recent', 'racket_proxAndDist'])
 del side6ago
 
-df['tbx1'] = df['tbx0'].shift(1)
-df['tbx2'] = df['tbx0'].shift(2)
-df['tbx3'] = df['tbx0'].shift(3)
-df['tbx4'] = df['tbx0'].shift(4)
-df['tby1'] = df['tby0'].shift(1)
-df['tby2'] = df['tby0'].shift(2)
-df['tby3'] = df['tby0'].shift(3)
-df['tby4'] = df['tby0'].shift(4)
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+# tennis ball tracking
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+
+df = df[['f', 'racket_side', 'swing']]
+
+df['bRadiusAndCoords'] = df.apply(lambda x: getTennisBallRadiusAndCoordinates(x, tbBoxes), axis=1)
+
+df[['bRadius', 'bx0', 'by0']] = pd.DataFrame(df['bRadiusAndCoords'].tolist(), index=df.index)
+
+df['bx1'] = df['bx0'].shift(1)
+df['by1'] = df['by0'].shift(1)
+df['bx2'] = df['bx0'].shift(2)
+df['by2'] = df['by0'].shift(2)
+df['bx3'] = df['bx0'].shift(3)
+df['by3'] = df['by0'].shift(3)
+df['bx4'] = df['bx0'].shift(4)
+df['by4'] = df['by0'].shift(4)
 
 
 # VECTORS
@@ -394,15 +406,25 @@ def angle_between(v1, v2):
     return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
 
 
-df['tba0'] = df.apply(lambda r: angle_between(np.array([r.tbx1, r.tby1]), np.array([r.tbx0, r.tby0])), axis=1)
-df['tba1'] = df.apply(lambda r: angle_between(np.array([r.tbx2, r.tby2]), np.array([r.tbx0, r.tby0])), axis=1)
-df['tba2'] = df.apply(lambda r: angle_between(np.array([r.tbx3, r.tby3]), np.array([r.tbx0, r.tby0])), axis=1)
-df['tba3'] = df.apply(lambda r: angle_between(np.array([r.tbx4, r.tby4]), np.array([r.tbx0, r.tby0])), axis=1)
+def vec(x1, y1, x2, y2):
+    if pd.isna(x1) or  pd.isna(y1) or  pd.isna(x2) or  pd.isna(y2):
+        return np.array([x2 - x1, y2 - y1])
+    return np.array([x2 - x1, y2 - y1]);
 
-df['tbd0'] = df.apply(lambda r: distLam(r.tbx1, r.tby1, r.tbx0, r.tby0), axis=1)
-df['tbd1'] = df.apply(lambda r: distLam(r.tbx2, r.tby2, r.tbx0, r.tby0), axis=1)
-df['tbd2'] = df.apply(lambda r: distLam(r.tbx3, r.tby3, r.tbx0, r.tby0), axis=1)
-df['tbd3'] = df.apply(lambda r: distLam(r.tbx4, r.tby4, r.tbx0, r.tby0), axis=1)
+
+# THESE ARE NOT VECTORS!  THEYRE COORDINATES!!!
+
+df['ba0'] = df.apply(lambda r: angle_between(vec(r.bx2, r.by2, r.bx1, r.by1), vec(r.bx1, r.by1, r.bx0, r.by0)), axis=1)
+
+df['ba0'] = df.apply(lambda r: angle_between(np.array([r.bx1, r.by1]), np.array([r.bx0, r.by0])), axis=1)
+df['ba1'] = df.apply(lambda r: angle_between(np.array([r.bx2, r.by2]), np.array([r.bx0, r.by0])), axis=1)
+df['ba2'] = df.apply(lambda r: angle_between(np.array([r.bx3, r.by3]), np.array([r.bx0, r.by0])), axis=1)
+df['ba3'] = df.apply(lambda r: angle_between(np.array([r.bx4, r.by4]), np.array([r.bx0, r.by0])), axis=1)
+
+df['bd0'] = df.apply(lambda r: distLam(r.bx1, r.by1, r.bx0, r.by0), axis=1)
+df['bd1'] = df.apply(lambda r: distLam(r.bx2, r.by2, r.bx0, r.by0), axis=1)
+df['bd2'] = df.apply(lambda r: distLam(r.bx3, r.by3, r.bx0, r.by0), axis=1)
+df['bd3'] = df.apply(lambda r: distLam(r.bx4, r.by4, r.bx0, r.by0), axis=1)
 
 # now what
 

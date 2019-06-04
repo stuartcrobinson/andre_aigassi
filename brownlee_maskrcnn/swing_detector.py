@@ -3,6 +3,7 @@ import copy
 import math
 import time
 
+import numpy as np
 import pandas as pd
 from scipy.spatial import distance
 
@@ -97,7 +98,7 @@ def getStuffFromMrcnnNpyFiles(playerPoses):
         print('frame: ', frameNumber)
         pose = playerPoses[i]
         r = np.load(ex4.getMrcnnDataPath(videoName, frameNumber)).item()
-        personMrcnn = ex4.getBestFromMrcnn(ex4.PERSON, r)  # same as biggest i guess??
+        personMrcnn = ex4.getBiggestMrcnnPerson(r)  # same as biggest i guess?? #switched from best
         racketMrcnn = ex4.getBestFromMrcnn(ex4.TENNIS_RACKET, r)
         ballMrcnn = ex4.getBestFromMrcnn(ex4.SPORT_BALL, r)
         personBox = personMrcnn['roi'] if 'roi' in personMrcnn else None
@@ -372,6 +373,15 @@ df['bRadiusAndCoords'] = df.apply(lambda x: getTennisBallRadiusAndCoordinates(x,
 
 df[['bRadius', 'bx', 'by']] = pd.DataFrame(df['bRadiusAndCoords'].tolist(), index=df.index)
 
+# remove ball at frame 488. wrong place. this could be identified automatically w/ angles and vectors
+
+framesToRemoveTennisBall = [488, 489, 496, 498, 605]
+for frame in framesToRemoveTennisBall:
+    i = frame - 1
+    df.at[i, 'bx'] = np.nan
+    df.at[i, 'by'] = np.nan
+    df.at[i, 'bRadius'] = np.nan
+
 df['bxe'] = df['bx']
 df['bye'] = df['by']
 
@@ -388,6 +398,10 @@ for i in range(30, len(df) - 1):
     yPrev3 = df['bye'].values[i - 3]
     xPrev4 = df['bxe'].values[i - 4]
     yPrev4 = df['bye'].values[i - 4]
+    xPrev5 = df['bxe'].values[i - 5]
+    yPrev5 = df['bye'].values[i - 5]
+    xPrev6 = df['bxe'].values[i - 6]
+    yPrev6 = df['bye'].values[i - 6]
     if pd.isna(x) and not pd.isna(xNext):
         if not pd.isna(xPrev1):
             df['bxe'].values[i] = (xPrev1 + xNext) / 2
@@ -419,6 +433,34 @@ for i in range(30, len(df) - 1):
             df['bye'].values[i - 2] = yNext - 3 * y_lenPer
             df['bxe'].values[i - 3] = xNext - 4 * x_lenPer
             df['bye'].values[i - 3] = yNext - 4 * y_lenPer
+        elif not pd.isna(xPrev5):
+            x_lenPer = (xNext - xPrev5) / 6
+            y_lenPer = (yNext - yPrev5) / 6
+            df['bxe'].values[i] = xNext - x_lenPer
+            df['bye'].values[i] = yNext - y_lenPer
+            df['bxe'].values[i - 1] = xNext - 2 * x_lenPer
+            df['bye'].values[i - 1] = yNext - 2 * y_lenPer
+            df['bxe'].values[i - 2] = xNext - 3 * x_lenPer
+            df['bye'].values[i - 2] = yNext - 3 * y_lenPer
+            df['bxe'].values[i - 3] = xNext - 4 * x_lenPer
+            df['bye'].values[i - 3] = yNext - 4 * y_lenPer
+            df['bxe'].values[i - 4] = xNext - 5 * x_lenPer
+            df['bye'].values[i - 4] = yNext - 5 * y_lenPer
+        elif not pd.isna(xPrev6):
+            x_lenPer = (xNext - xPrev6) / 7
+            y_lenPer = (yNext - yPrev6) / 7
+            df['bxe'].values[i] = xNext - x_lenPer
+            df['bye'].values[i] = yNext - y_lenPer
+            df['bxe'].values[i - 1] = xNext - 2 * x_lenPer
+            df['bye'].values[i - 1] = yNext - 2 * y_lenPer
+            df['bxe'].values[i - 2] = xNext - 3 * x_lenPer
+            df['bye'].values[i - 2] = yNext - 3 * y_lenPer
+            df['bxe'].values[i - 3] = xNext - 4 * x_lenPer
+            df['bye'].values[i - 3] = yNext - 4 * y_lenPer
+            df['bxe'].values[i - 4] = xNext - 5 * x_lenPer
+            df['bye'].values[i - 4] = yNext - 5 * y_lenPer
+            df['bxe'].values[i - 5] = xNext - 6 * x_lenPer
+            df['bye'].values[i - 5] = yNext - 6 * y_lenPer
 
 df['isBallTrackStart'] = False
 df['isBallTrackStart'].values[46] = True
@@ -427,6 +469,7 @@ df['isBallTrackStart'].values[186] = True
 df['isBallTrackStart'].values[262] = True
 df['isBallTrackStart'].values[342] = True
 df['isBallTrackStart'].values[413] = True
+df['isBallTrackStart'].values[489] = True
 df['isBallTrackStart'].values[575] = True
 
 ################################################################################################################
@@ -480,7 +523,6 @@ def f(x):
 
 print(f(1.25))
 
-import numpy as np
 import cv2
 
 from numpy import ones, vstack
@@ -488,23 +530,20 @@ from numpy.linalg import lstsq
 
 
 def getStartFrameForFrame(frame):
-    return df.query(f'f < {frame} and isBallTrackStart == True').tail(1)['f'].values[0]
+    try:
+        return df.query(f'f < {frame} and isBallTrackStart == True').tail(1)['f'].values[0]
+    except:
+        return -1
 
 
-def getRadius(x):
-    return df.query(f'f <= {frame} and f >= {startFrame}').sort_values('bx').query(f'bx <= {x + 10}').tail(1)['bRadius'].values[0]
+def getRadius(x, frame, startFrame):
+    try:
+        return df.query(f'f <= {frame} and f >= {startFrame}').sort_values('bx').query(f'bx <= {x + 10}').tail(1)['bRadius'].values[0]
+    except:
+        return 4
 
 
-# def apply_mask(image, mask, color, alpha=0.5):
-#     """Apply the given mask to the image.
-#     """
-#     for c in range(3):
-#         image[:, :, c] = np.where(mask == 1,
-#                                   image[:, :, c] * (1 - alpha) + alpha * color[c] * 255,
-#                                   image[:, :, c])
-#     return image
-
-def apply_mask(image, originalImage, mask):
+def replaceImageAtMask(image, originalImage, mask):
     """Apply the given mask to the image.
     """
     for c in range(3):
@@ -519,89 +558,154 @@ def apply_mask(image, originalImage, mask):
 ###############################################################################################
 ###############################################################################################
 ###############################################################################################
+
+
+def getSwingToDisplay(row):
+    return row['prevSwing8'] or row['prevSwing7'] or row['prevSwing6'] or row['prevSwing5'] or row['prevSwing4'] or row['prevSwing3'] or row['prevSwing2'] or row['prevSwing1'] or row['swing']
+
+
+df['prevSwing8'] = df['swing'].shift(8)
+df['prevSwing7'] = df['swing'].shift(7)
+df['prevSwing6'] = df['swing'].shift(6)
+df['prevSwing5'] = df['swing'].shift(5)
+df['prevSwing4'] = df['swing'].shift(4)
+df['prevSwing3'] = df['swing'].shift(3)
+df['prevSwing2'] = df['swing'].shift(2)
+df['prevSwing1'] = df['swing'].shift(1)
+
+df['swingToDisplay'] = df.apply(lambda row: getSwingToDisplay(row), axis=1)
+
+# df['swingToDisplay'] = df['swing'] or df['prevSwing']
+df = df.drop(columns=['prevSwing', 'prevSwing1', 'prevSwing2',
+                      'prevSwing4',
+                      'prevSwing5',
+                      'prevSwing6',
+                      'prevSwing7',
+                      'prevSwing8'], errors='ignore')
+
+
 ###############################################################################################
 ###############################################################################################
 ###############################################################################################
 ###############################################################################################
 ###############################################################################################
 
-frame = 50
-# inputImage = ex4.getMrcnnImgPath("19sec", frame)
-inputImage = ex4.getRawImgPath("19sec", frame)
-image = cv2.imread(inputImage)
-alpha = 0.5
-overlay = image.copy()
-output = image.copy()
-
-# cv2.rectangle(overlay, (420, 205), (595, 385), (0, 0, 255), -1)
-# cv2.rectangle(overlay, (820, 405), (695, 785), (255, 0, 255), -1)
-
-startFrame = getStartFrameForFrame(frame)
-
-spline = splines[startFrame]
-
-r = np.load(ex4.getMrcnnDataPath(videoName, frame)).item()
-personMrcnn = ex4.getBestFromMrcnn(ex4.PERSON, r)  # same as biggest i guess??
-personMask = personMrcnn['mask']
-
-bx = df.query(f'f == {frame}')['bx'].values[0]
-by = df.query(f'f == {frame}')['by'].values[0]
-swing = df.query(f'f == {frame}')['swing'].values[0]
-
-splineXMin = min(int(spline["X"][0]), int(spline["X"][len(spline["X"]) - 1]))
-splineXMax = max(int(spline["X"][0]), int(spline["X"][len(spline["X"]) - 1]))
-
-minx = min(int(spline["X"][0]), int(bx))
-maxx = max(int(spline["X"][0]), int(bx))
-
-minxRadius = getRadius(minx)
-maxxRadius = getRadius(maxx)
-
-points = [(minx, minxRadius), (maxx, maxxRadius)]
-x_coords, y_coords = zip(*points)
-A = vstack([x_coords, ones(len(x_coords))]).T
-m, c = lstsq(A, y_coords)[0]
-print("Line Solution is y = {m}x + {c}".format(m=m, c=c))
+def getLastNonNaNBx(frame):
+    try:
+        return df.query(f'f < {frame} and bxe == bxe').tail(1)['bxe'].values[0]
+    except:
+        return np.nan
 
 
-def getRadiusFunction(x):
-    return m * x + c
+# getNextNonNaNBx
+def getNextNonNaNBx(frame):
+    try:
+        return df.query(f'f > {frame} and bxe == bxe').head(1)['bxe'].values[0]
+    except:
+        return np.nan
 
-if frame - startFrame < 20:
-    for x in range(minx, maxx):
-        if x >= splineXMax or x <= splineXMin:
-            continue
-        tck = spline["tck"]
-        y = int(interpolate.splev(x, tck))
-        radius = int(getRadiusFunction(x))
-        print(x, y, radius)
-        cv2.circle(overlay, (x, y), radius, (255, 255, 0))
 
+# getNextNonNaNBx
+
+def getFinalRenderedImgPath(videoName, frameNumber):
+    # f"{1:02d}"
+    return f'/Users/stuartrobinson/repos/computervision/andre_aigassi/images/tennis_video/frames/rendered/{videoName}/{frameNumber:06d}.png'
+
+
+def ren(frame):
+    # frame = 1
+    # inputImage = ex4.getMrcnnImgPath("19sec", frame)
+    inputImage = ex4.getRawImgPath("19sec", frame)
+    image = cv2.imread(inputImage)
+    outputPath = getFinalRenderedImgPath("19sec", frame)
+    alpha = 0.5
+    overlay = image.copy()
+    output = image.copy()
+    #
+    swing = df.query(f'f == {frame}')['swingToDisplay'].values[0]
+    if pd.isna(swing):
+        swing = ''
+    #
+    r = np.load(ex4.getMrcnnDataPath(videoName, frame)).item()
+    personMrcnn = ex4.getBiggestMrcnnPerson(r)  # same as biggest i guess??
+    personMask = personMrcnn['mask']
+    print("personMask", personMask)
+    #
+    startFrame = getStartFrameForFrame(frame)
+    if startFrame > 0 and frame < 570:
+        #
+        spline = splines[startFrame]
+        #
+        bx = df.query(f'f == {frame}')['bxe'].values[0]
+        by = df.query(f'f == {frame}')['bye'].values[0]
+        #
+        #
+        splineXMin = min(int(spline["X"][0]), int(spline["X"][len(spline["X"]) - 1]))
+        splineXMax = max(int(spline["X"][0]), int(spline["X"][len(spline["X"]) - 1]))
+        #
+        #
+        if pd.isna(bx):
+            bx = getLastNonNaNBx(frame)
+        #
+        #
+        if pd.isna(bx):
+            bx = getNextNonNaNBx(frame)
+        #
+        #
+        minx = min(int(spline["X"][0]), int(bx))
+        maxx = max(int(spline["X"][0]), int(bx))
+        #
+        minxRadius = getRadius(minx, frame, startFrame)
+        maxxRadius = getRadius(maxx, frame, startFrame)
+        #
+        points = [(minx, minxRadius), (maxx, maxxRadius)]
+        x_coords, y_coords = zip(*points)
+        A = vstack([x_coords, ones(len(x_coords))]).T
+        m, c = lstsq(A, y_coords)[0]
+        # print("Line Solution is y = {m}x + {c}".format(m=m, c=c))
+        #
+        if frame - startFrame < 20:
+            for x in range(minx, maxx):
+                if x >= splineXMax or x <= splineXMin:
+                    continue
+                tck = spline["tck"]
+                y = int(interpolate.splev(x, tck))
+                radius = int(m * x + c)
+                # print(x, y, radius)
+                cv2.circle(overlay, (x, y), radius, (255, 255, 0), -1)
+    #
+    #
+    # frame = 190
+    # # inputImage = ex4.getMrcnnImgPath("19sec", frame)
+    # inputImage = ex4.getRawImgPath("19sec", frame)
+    # image = cv2.imread(inputImage)
+    # alpha = 0.5
+    # overlay = image.copy()
+    # output = image.copy()
+    #
+    #
+    width = image.shape[1]
+    height = image.shape[0]
+    cv2.putText(overlay, "Stuart Robinson, Durham NC, 5/19", (width - 580, height - 20), cv2.FONT_HERSHEY_SIMPLEX, 1, (100, 50, 20), 3)
+    cv2.putText(overlay, "STATS", (470, 500), cv2.FONT_HERSHEY_SIMPLEX, 4, (50, 50, 50), 3)
+    #
+    cv2.putText(overlay, swing, (30, height - 40), cv2.FONT_HERSHEY_SIMPLEX, 3.0, (255, 255, 255), 3)
+    #
+    overlay = replaceImageAtMask(overlay, image, personMask)
+    #
+    cv2.addWeighted(overlay, alpha, output, 1 - alpha, 0, output)
+    cv2.imwrite('cvout.png', output)
+    cv2.imwrite(outputPath, output)
+
+
+ren(495)
 #
-# frame = 190
-# # inputImage = ex4.getMrcnnImgPath("19sec", frame)
-# inputImage = ex4.getRawImgPath("19sec", frame)
-# image = cv2.imread(inputImage)
-# alpha = 0.5
-# overlay = image.copy()
-# output = image.copy()
 
-
-width = image.shape[1]
-height = image.shape[0]
-# cv2.rectangle(overlay, (width - 495, height - 40), (width, height - 40), (255, 255, 255), -1)
-cv2.putText(overlay, "Stuart Robinson, Durham NC", (width - 480, height - 20), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 3)
-cv2.putText(overlay, "STATS", (470, 500), cv2.FONT_HERSHEY_SIMPLEX, 4, (50, 50, 50), 3)
-
-# cv2.rectangle(overlay, (image.shape[1] - 495, 0), (image.shape[1], 40), (255, 255, 255), -1)
-# cv2.putText(overlay, "Stuart Robinson, Durham NC", (width - 480, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 3)
-cv2.putText(overlay, swing, (30, image.shape[0] - 40), cv2.FONT_HERSHEY_SIMPLEX, 3.0, (255, 255, 255), 3)
-
-overlay = apply_mask(overlay, image, personMask)
-
-cv2.addWeighted(overlay, alpha, output, 1 - alpha, 0, output)
-cv2.imwrite('cvout.png', output)
-
-
-#TODO - render each raw frame!!!
-# remember previous one's overlay.  if current frame doesn't have contrail, use prev frame's contrail and swing word
+for i in range(len(df)):
+    print('#########################################################################################################')
+    print('#########################################################################################################')
+    print('##############################################   ' + str(frameNumber) + '   ##############################################')
+    print('#########################################################################################################')
+    print('#########################################################################################################')
+    frameNumber = i + 1
+    ren(frameNumber)

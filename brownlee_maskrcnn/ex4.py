@@ -462,6 +462,10 @@ def getMrcnnDataPath(videoName, frameNumber):
     return f'/Users/stuartrobinson/repos/computervision/andre_aigassi/images/tennis_video/frames/segment/data/{videoName}/{frameNumber:06d}.npy'
 
 
+def getFinalRenderedImgPath(videoName, frameNumber):
+    # f"{1:02d}"
+    return f'/Users/stuartrobinson/repos/computervision/andre_aigassi/images/tennis_video/frames/rendered/{videoName}/{frameNumber:06d}.png'
+
 def qaPoses(videoName):
     '''ensure each main player pose has a neck and right elbow'''
     numFrames = len(getRawVideoFrames(videoName))

@@ -1,0 +1,91 @@
+good cnn slides: https://www.slideshare.net/jbhuang/lecture-29-convolutional-neural-networks-computer-vision-spring2015
+
+
+novel ?
+
+1.  image stabilization.
+2.  do CNN on image difference (pixel-wise)
+
+use diff as input to cnn 
+
+inputs:
+
+diff
+roi as mask ?  or as coordinates??????
+
+
+
+
+ or as top-left/bottom-right offset 
+
+
+
+ http://stanford.edu/class/ee367/Winter2018/fazio_fisher_fujinami_ee367_win18_report.pdf
+ https://arxiv.org/pdf/1807.11348.pdf
+ https://arxiv.org/pdf/1608.05571.pdf
+ https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6263798/
+ https://en.wikipedia.org/wiki/Kalman_filter
+ https://www.youtube.com/watch?v=mwn8xhgNpFY
+ https://ieeexplore.ieee.org/document/8359334
+ https://ieeexplore.ieee.org/document/7046412
+
+
+
+maybe defines DCF??? 
+ https://ieeexplore.ieee.org/abstract/document/7496863
+
+http://openaccess.thecvf.com/content_cvpr_2017/papers/Lukezic_Discriminative_Correlation_Filter_CVPR_2017_paper.pdf
+https://www.cv-foundation.org/openaccess/content_iccv_2015_workshops/w14/papers/Danelljan_Convolutional_Features_for_ICCV_2015_paper.pdf
+
+https://academic.oup.com/comjnl/advance-article-abstract/doi/10.1093/comjnl/bxz049/5498234?redirectedFrom=fulltext
+
+https://www.researchgate.net/publication/310953390_Discriminative_Correlation_Filter_with_Channel_and_Spatial_Reliability
+
+pivot to Correlation FIlter search:
+https://www.google.com/search?ei=7JzxXKmgPMPs_Qa-kKrICQ&q=machine+vision+what+is+a+%22correlation+filter%22&oq=machine+vision+what+is+a+%22correlation+filter%22&gs_l=psy-ab.3...50404.50996..51326...0.0..1.100.869.9j1......0....1..gws-wiz.......0i71.EcT57EVa0QQ
+https://www.google.com/search?ei=Op3xXM7iKa6-ggetqLa4CQ&q=+%22correlation+filter%22&oq=+%22correlation+filter%22&gs_l=psy-ab.3..0i7i30l3j0i20i263j0i7i30l6.8993.8993..9418...0.0..0.87.87.1......0....1..gws-wiz.......0i71.f5nNOIk6u7k
+
+https://www.robots.ox.ac.uk/~luca/cfnet.htmlisot
+
+http://stanford.edu/class/ee367/Winter2018/fazio_fisher_fujinami_ee367_win18_report.pdf
+
+heat map tennis ball tracking:
+https://inoliao.github.io/CoachAI/
+
+https://medium.com/@manivannan_data/multiple-object-tracking-algorithms-a01973272e52
+"Three-dimensional shape from motion: Also called structure from motion. Similar problems as in stereo vision."
+
+https://www.learnopencv.com/goturn-deep-learning-based-object-tracking/
+GOTURN - find bounding box for current frame (polar bears)- output: coordinates of bounding box
+
+https://arxiv.org/pdf/1707.00569.pdf
+"An In-Depth Analysis of Visual Tracking with Siamese Neural Networks"
+mentions recurrent siamese. 
+
+gridsearch
+
+- parameter space - 
+
+su joy
+
+attention layer 
+
+
+
+
+TODO
+- use homography to align consecutive images.  (during training, do this per object to track???
+- dont use temporal filter.  use diff image and init bounding box coordinates --> next coordinates.
+- --- lstm on fully connected bit.
+- align images before getting diffs
+
+we only need pair-wise homography.  series of frames dont need to line up.
+
+attention layer?
+https://towardsdatascience.com/light-on-math-ml-attention-with-keras-dc8dbc1fad39
+
+https://machinelearningmastery.com/cnn-long-short-term-memory-networks/
+
+https://github.com/keras-team/keras/issues/4149
+
+MOT challenge gt columns: https://motchallenge.net/instructions/

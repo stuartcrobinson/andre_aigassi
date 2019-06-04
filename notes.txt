@@ -178,6 +178,12 @@ ffmpeg -r 30 -s 1280x720 -i thumb%05d.png.jpg -vcodec libx264 -crf 25  -pix_fmt 
 
 works!
 
+final render attempt from rendered frames:
+
+ffmpeg -r 30 -s 1280x720 -i 19sec/%06d.png -vcodec libx264 -crf 10 -pix_fmt yuv420p rendered.mp4
+
+
+
 now, how to segment in higher quality?  png instead of jpg 
 
 

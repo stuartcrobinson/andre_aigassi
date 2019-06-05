@@ -6,11 +6,11 @@ MAX_MATCHES = 500
 GOOD_MATCH_PERCENT = 0.15
 
 
-def alignHomography2018(im1, im2):
+def alignHomography2018(im1Color, im1Gray, im2Gray):
     '''img2 is ref'''
-    # Convert images to grayscale
-    im1Gray = cv2.cvtColor(im1, cv2.COLOR_BGR2GRAY)
-    im2Gray = cv2.cvtColor(im2, cv2.COLOR_BGR2GRAY)
+    # # Convert images to grayscale
+    # im1Gray = cv2.cvtColor(im1, cv2.COLOR_BGR2GRAY)
+    # im2Gray = cv2.cvtColor(im2, cv2.COLOR_BGR2GRAY)
 
     # Detect ORB features and compute descriptors.
     orb = cv2.ORB_create(MAX_MATCHES)
@@ -29,8 +29,8 @@ def alignHomography2018(im1, im2):
     matches = matches[:numGoodMatches]
 
     # Draw top matches
-    imMatches = cv2.drawMatches(im1, keypoints1, im2, keypoints2, matches, None)
-    cv2.imwrite("matches.jpg", imMatches)
+    # imMatches = cv2.drawMatches(im1Gray, keypoints1, im2Gray, keypoints2, matches, None)
+    # cv2.imwrite("matches.jpg", imMatches)
 
     # Extract location of good matches
     points1 = np.zeros((len(matches), 2), dtype=np.float32)
@@ -44,10 +44,10 @@ def alignHomography2018(im1, im2):
     h, mask = cv2.findHomography(points1, points2, cv2.RANSAC)
 
     # Use homography
-    height, width, channels = im2.shape
-    im1Reg = cv2.warpPerspective(im1, h, (width, height))
+    height, width = im1Gray.shape
+    im1Reg = cv2.warpPerspective(im1Color, h, (width, height))
 
-    return im1Reg, h
+    return im1Reg#, h
 
 
 if __name__ == '__main__':

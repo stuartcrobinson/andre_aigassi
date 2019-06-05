@@ -4,59 +4,62 @@ import numpy as np
 from satyaHomography2018 import alignHomography2018
 
 # Read input video
-cap = cv2.VideoCapture('video.mp4')
+# cap = cv2.VideoCapture('video.mp4')
 # cap = cv2.VideoCapture('/Users/stuartrobinson/repos/computervision/andre_aigassi/images/tennis_video/forehand.mp4')
+cap = cv2.VideoCapture('/Users/stuartrobinson/repos/computervision/andre_aigassi/images/tennis_video/19sec.mov')
 
 n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) // 2
+h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) // 2
 fps = cap.get(cv2.CAP_PROP_FPS)
 fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+print(n_frames, w, h, fps, fourcc)
 
-out = cv2.VideoWriter('video_out.avi', fourcc, fps, (w, h))
+out = cv2.VideoWriter('output/video_out.avi', fourcc, fps, (w, 2 * h))
 
 _, prev = cap.read()
+prev = cv2.resize(prev, (w, h))
 prev_gray = cv2.cvtColor(prev, cv2.COLOR_BGR2GRAY)
 
-startFrameI = 1
-lastFrameI = 10000
 
-startFrame = []
+def getDiff(img1, img2):
+    '''img1 - img2'''
+    stack = np.dstack([img1, img2])
+    diff = np.absolute(np.dot(stack, [1, -1])).astype('uint8')
+    return diff
+
+
+def writeTextTopLeft(image_in, text):
+    cv2.putText(img=image_in, text=text, org=(10, 30),
+                fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=[0, 0, 0], lineType=cv2.LINE_AA, thickness=4)
+    cv2.putText(img=image_in, text=text, org=(10, 30),
+                fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=[100, 100, 100], lineType=cv2.LINE_AA, thickness=2)
+
 
 for i in range(n_frames - 2):
     success, frame = cap.read()
-    # if i == startFrameI - 1:
-    #     startFrame = frame
-    #     prev = frame
-    #     prev_gray = cv2.cvtColor(prev, cv2.COLOR_BGR2GRAY)
     if not success:
         break
-    # if i < startFrameI:
-    #     continue
-    # if i > lastFrameI:
-    #     break
+    frame = cv2.resize(frame, (w, h))
     frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     #
-    alignedFrame, h = alignHomography2018(frame, prev)
-    # alignedFrame = frame
+    alignedFrame = alignHomography2018(frame, frame_gray, prev_gray)
     alignedFrame_gray = cv2.cvtColor(alignedFrame, cv2.COLOR_BGR2GRAY)
     #
-    # diff_gray = np.absolute(frame_gray - prev_gray) # why looks like shit
-
-    stack = np.dstack([prev_gray, alignedFrame_gray])
-    # stack = np.dstack([prev_gray, frame_gray])
-    diff_gray = np.absolute(np.dot(stack, [-1, 1])).astype('uint8')
-    # diff = diff.astype('uint8')
-
-    # diff = cv2.cvtColor(frame_gray, cv2.COLOR_GRAY2BGR)
-    diff = cv2.cvtColor(diff_gray, cv2.COLOR_GRAY2BGR)
+    diff_gray_aligned = getDiff(alignedFrame_gray, prev_gray)
+    diff_gray_unaligned = getDiff(frame_gray, prev_gray)
     #
-    cv2.imshow("Before and After", diff)
+    diff_aligned = cv2.cvtColor(diff_gray_aligned, cv2.COLOR_GRAY2BGR)
+    diff_unaligned = cv2.cvtColor(diff_gray_unaligned, cv2.COLOR_GRAY2BGR)
+    #
+    writeTextTopLeft(diff_aligned, 'aligned')
+    writeTextTopLeft(diff_unaligned, 'unaligned')
+    frame_out = cv2.vconcat([diff_aligned, diff_unaligned])
+    #
+    cv2.imshow("asdf", frame_out)
     cv2.waitKey(10)
-    out.write(diff)  # https://stackoverflow.com/a/50076149/8870055
-    # out.write(frame)  # https://stackoverflow.com/a/50076149/8870055
+    out.write(frame_out)  # https://stackoverflow.com/a/50076149/8870055
     prev_gray = frame_gray
-    prev = frame
 
 # Release video
 cap.release()
@@ -64,6 +67,5 @@ out.release()
 # Close windows
 cv2.destroyAllWindows()
 
-
-TODO print number on frame screens to compare.
-or just print then side by side like satya did
+# TODO print number on frame screens to compare.
+# or just print then side by side like satya did

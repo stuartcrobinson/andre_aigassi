@@ -89,3 +89,87 @@ https://machinelearningmastery.com/cnn-long-short-term-memory-networks/
 https://github.com/keras-team/keras/issues/4149
 
 MOT challenge gt columns: https://motchallenge.net/instructions/
+<frame>, <id>, <bb_left>, <bb_top>, <bb_width>, <bb_height>, <conf>, <x>, <y>, <z>
+
+
+CNNS & keras:
+
+https://keras.io/examples/cifar10_cnn/
+https://keras.io/examples/mnist_cnn/
+https://adventuresinmachinelearning.com/keras-tutorial-cnn-11-lines/        <-- great diagram
+
+
+LSTM & CNN
+
+https://machinelearningmastery.com/cnn-long-short-term-memory-networks/
+https://github.com/keras-team/keras/issues/5527
+
+1 dimensional lstm for language stuff?  https://github.com/keras-team/keras/blob/master/examples/imdb_cnn_lstm.py
+
+(siamese) re: merging output layers - useful for merging box coordinates w/ CNN-encoded layer:
+https://sorenbouma.github.io/blog/oneshot/
+https://gist.github.com/mmmikael/0a3d4fae965bdbec1f9d
+https://keras.io/examples/mnist_siamese/
+https://software.intel.com/en-us/articles/keras-implementation-of-siamese-like-networks -- siamese-like ?
+https://www.kaggle.com/kmader/image-similarity-with-siamese-networks
+
+learn to use generators to feed keras
+
+downloading trackingnet data in ~/r/c/TrackingNet-devkit <-- trash. deleted
+downloading MOT tracking data from https://motchallenge.net/data/CVPR19.zip
+
+other sources? https://www.researchgate.net/post/Where_can_I_find_videos_for_object_tracking
+
+downloading http://cmp.felk.cvut.cz/~vojirtom/dataset/tv77/ from "other sources" above
+
+NOT DOWNLOADED: http://homepages.inf.ed.ac.uk/rbf/CAVIARDATA1/
+
+lots of stuff here: http://riemenschneider.hayko.at/vision/dataset/index.php?filter=+tracking
+
+this has football specific! http://riemenschneider.hayko.at/vision/dataset/index.php?filter=+tracking (soccer multiview http://www.csc.kth.se/~vahidk/football_data.html)
+
+downloading central pedestrian crossing from http://www.vision.ee.ethz.ch/datasets/index.en.html
+
+maybe useful: https://data.vision.ee.ethz.ch/cvl/aess/dataset/
+maybe useful: http://www.cvg.reading.ac.uk/PETS2009/a.html#s0
+
+TODO - organize downloaded tracking data
+
+tested:
+TrackingDataset_TV77.zip  http://cmp.felk.cvut.cz/~vojirtom/dataset/tv77/ from  https://www.researchgate.net/post/Where_can_I_find_videos_for_object_tracking
+CVPR19.zip  https://motchallenge.net/data/CVPR19.zip
+iccv07-data.tar.gz  https://data.vision.ee.ethz.ch/cvl/aess/dataset/ - not tracking.  just coordinates in video frames. 
+
+doing remote image stuff:
+https://stackoverflow.com/questions/43943333/cv2-imshow-crashes-kernel
+https://stackoverflow.com/questions/8630358/displaying-images-using-opencv-running-on-remote-host-on-local-display
+https://stackoverflow.com/questions/32370281/how-to-embed-image-or-picture-in-jupyter-notebook-either-from-a-local-machine-o
+
+? https://stackoverflow.com/questions/10628262/inserting-image-into-ipython-notebook-markdown/37057341
+
+
+jupyter
+https://www.datacamp.com/community/tutorials/tutorial-jupyter-notebook
+
+TRACKINGNET SUCKS ?? 
+see ZZpckGIvGTI_1.txt annotations and images 0 and 227 and 244.  244 -split screen with tracked image duplicated lol 
+looks like they used some tracking algorithm to create this trash
+
+TODO - investigate training data.  build keras network. that feeds in pairwise diffed and aligned images from generator.
+
+recurrent tracker: https://www.youtube.com/watch?v=RByCiOLlxug
+https://arxiv.org/pdf/1705.06368.pdf
+
+http://www.votchallenge.net/vot2014/dataset.html
+
+imagenet video 
+http://bvisionweb1.cs.unc.edu/ilsvrc2015/download-videos-3j16.php
+
+TODO - download full imagenet vid to aws and search for tennis racket and sports ball in same frame 
+
+yolo works better in color to find tennis ball.
+
+http://cs-chan.com/downloads_MAMo_dataset.html The Malaya Abrupt Motion (MAMo) dataset is targeted for visual tracking, particularly for abrupt motion tracking
+
+badminton dataset looks good???
+ping pong data: ? https://mc.ai/training-an-object-detector-to-track-a-table-tennis-ball/

@@ -1,3 +1,9 @@
+import os
+
+import cv2
+
+import imgTools as tools
+
 """
 doing QA on I-No Liao's TrackNet's badminton tracking traing data from:
 https://inoliao.github.io/CoachAI/
@@ -11,22 +17,17 @@ for each badminton frame
 write video
 """
 
-
 """
 this file displays each image in the training data with a green circle around the coordinates listed in Badminton_label.csv
 
 purpose is to make sure the listed coordinates are actually effectively tracking the birdie
 """
-import os
-
-import cv2
-
-import imgTools as tools
 
 coordinatesFile = "/Users/stuartrobinson/repos/computervision/andre_aigassi/images/badminton/Badminton_dataset/Badminton_label.csv"
 imagesDir = "/Users/stuartrobinson/repos/computervision/andre_aigassi/images/badminton/Badminton_dataset/video_frames"
 
 numFrames = sum(1 for line in open(coordinatesFile)) - 1
+
 
 def getImage(frameNumber):
     path = os.path.join(imagesDir, str(frameNumber) + '.jpg')
@@ -50,7 +51,6 @@ with open(coordinatesFile) as f:
         cv2.circle(im, (x, y), 10, (0, 255, 0), thickness=2)
         cv2.imshow("asdf2", im)
         cv2.waitKey(10)
-
 
 """
 result -- data looks great !!! thank you I-No Liao!!!!

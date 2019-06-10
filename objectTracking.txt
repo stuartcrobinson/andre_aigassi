@@ -173,3 +173,32 @@ http://cs-chan.com/downloads_MAMo_dataset.html The Malaya Abrupt Motion (MAMo) d
 
 badminton dataset looks good???
 ping pong data: ? https://mc.ai/training-an-object-detector-to-track-a-table-tennis-ball/
+
+TODO - badminton tracker.
+
+1.  no need to stabilize camera - overhead camera is still.
+            also https://www.youtube.com/watch?v=m49CcKK9vFo (downloaded)
+            eh... do it anyway?  for closeup-montage shots?
+2.  color-coded temporal filter.  do this.  use badminton frames cos still camera.
+3.  generate single image with past 6 (?) frames.
+
+
+do cnns use color???
+yes, filters are 3d
+great post on color and cnn: https://www.researchgate.net/post/How_will_channels_RGB_effect_convolutional_neural_network
+
+
+cnn input:  cctf image
+output:     ball coordinates, confidence
+
+training:  cctf image generation:  drop out input frames at n% (15%?)
+
+
+TODO
+
+1.  create cctf images with randomized missing values ... wait won't this screw up the final image if a whole frame is missing...
+        need several diff filters.  all numbers have to adjust to compensate for missing vlaues.  DO THIS LATER.
+
+1.  create cctf images from full input data.
+
+

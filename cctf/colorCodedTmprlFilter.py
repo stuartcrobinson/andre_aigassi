@@ -28,7 +28,7 @@ im6 = cv2.imread('/Users/stuartrobinson/repos/computervision/andre_aigassi/image
 
 resizeFactor = 1
 
-im0 = cv2.resize(im0, (im0.shape[1] // resizeFactor, im0.shape[0] // resizeFactor))
+im0 = cv2.bye(im0, (im0.shape[1] // resizeFactor, im0.shape[0] // resizeFactor))
 im1 = cv2.resize(im1, (im1.shape[1] // resizeFactor, im1.shape[0] // resizeFactor))
 im2 = cv2.resize(im2, (im2.shape[1] // resizeFactor, im2.shape[0] // resizeFactor))
 im3 = cv2.resize(im3, (im3.shape[1] // resizeFactor, im3.shape[0] // resizeFactor))

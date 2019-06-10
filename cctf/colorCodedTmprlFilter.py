@@ -59,6 +59,9 @@ def changeColor(imGray, colors):
     imGrayRgb = cv2.cvtColor(imGray, cv2.COLOR_GRAY2BGR)
     fpct = imGrayRgb / 255
     fc = colors * fpct
+    # fc = fc*4         #no. it doesn't work to brighten per frame cos "colors" is meaningless as color
+    # fc = np.minimum(fc, colors)
+    # fc = np.maximum(fc, getColor(fc.shape, 0, 0, 0))
     # fc = fc.astype('uint8')
     # cv2.imshow("asdf", fc)
     # cv2.waitKey(50)
@@ -112,6 +115,47 @@ cv2.imshow("asdf", cctf)
 cv2.waitKey(1000)
 cv2.waitKey(1000)
 
+def writeTextTopLeft(image_in, text):
+    cv2.putText(img=image_in, text=text, org=(10, 30),
+                fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=[0, 0, 0], lineType=cv2.LINE_AA, thickness=4)
+    cv2.putText(img=image_in, text=text, org=(10, 30),
+                fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=[100, 100, 100], lineType=cv2.LINE_AA, thickness=2)
+
+
+# Read input video
+# cap = cv2.VideoCapture('video.mp4')
+# cap = cv2.VideoCapture('/Users/stuartrobinson/repos/computervision/andre_aigassi/images/tennis_video/forehand.mp4')
+# cap = cv2.VideoCapture('/Users/stuartrobinson/repos/computervision/andre_aigassi/images/badminton_video/raw/Longest rally in badminton history (Men´s singles).mp4')
+
+# cap = cv2.VideoCapture('/Users/stuartrobinson/repos/computervision/andre_aigassi/images/tennis_video/19sec.mov')
+cap = cv2.VideoCapture('/Users/stuartrobinson/repos/computervision/andre_aigassi/images/badminton/raw/Longest rally in badminton history (Men´s singles).mp4')
+n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+w = int(int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) / 1.5)
+h = int(int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) / 1.5)
+fps = cap.get(cv2.CAP_PROP_FPS)
+fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+print(n_frames, w, h, fps, fourcc)
+
+# out = cv2.VideoWriter('output/cctf_video_out.avi', fourcc, fps, (w, 2*h))
+out = cv2.VideoWriter('output/cctf_video_out.avi', fourcc, fps, (w, h))
+
+_, prev = cap.read()
+prev = cv2.resize(prev, (w, h))
+prev1_gray = cv2.cvtColor(prev, cv2.COLOR_BGR2GRAY)
+prev2_gray = prev1_gray.copy()
+prev3_gray = prev1_gray.copy()
+prev4_gray = prev1_gray.copy()
+prev5_gray = prev1_gray.copy()
+prev6_gray = prev1_gray.copy()
+
+
+s = prev1_gray.shape
+colors1 = (getColor(s, 255, 0, 0))
+colors2 = (getColor(s, 0, 126, 0))
+colors3 = (getColor(s, 255, 126, 0))
+colors4 = (getColor(s, -255, 126, 0))
+colors5 = (getColor(s, -75, -75, 255))
+colors6= (getColor(s, 255, 0, 255))
 
 def getCctf(g0, g1, g2, g3, g4, g5, g6, doAlign=False):
     ''' g for gray'''
@@ -141,12 +185,12 @@ def getCctf(g0, g1, g2, g3, g4, g5, g6, doAlign=False):
     # diff3_4c = changeColor(diff3_4, getColor(s, -255, 126, 0))
     # diff4_5c = changeColor(diff4_5, getColor(s, 255, 0, 255))
     # this works for rainbow!
-    diff0_1c = changeColor(diff0_1, getColor(s, 255, 0, 0))
-    diff1_2c = changeColor(diff1_2, getColor(s, 0, 126, 0))
-    diff2_3c = changeColor(diff2_3, getColor(s, 255, 126, 0))
-    diff3_4c = changeColor(diff3_4, getColor(s, -255, 126, 0))
-    diff4_5c = changeColor(diff4_5, getColor(s, -75, -75, 255))
-    diff5_6c = changeColor(diff5_6, getColor(s, 255, 0, 255))
+    diff0_1c = changeColor(diff0_1, colors1)
+    diff1_2c = changeColor(diff1_2, colors2)
+    diff2_3c = changeColor(diff2_3, colors3)
+    diff3_4c = changeColor(diff3_4, colors4)
+    diff4_5c = changeColor(diff4_5, colors5)
+    diff5_6c = changeColor(diff5_6, colors6)
     #
     cctf = diff0_1c + diff1_2c + diff2_3c + diff3_4c + diff4_5c + diff5_6c
     cctf = cctf * 4
@@ -156,37 +200,6 @@ def getCctf(g0, g1, g2, g3, g4, g5, g6, doAlign=False):
     return cctf
 
 
-def writeTextTopLeft(image_in, text):
-    cv2.putText(img=image_in, text=text, org=(10, 30),
-                fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=[0, 0, 0], lineType=cv2.LINE_AA, thickness=4)
-    cv2.putText(img=image_in, text=text, org=(10, 30),
-                fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=[100, 100, 100], lineType=cv2.LINE_AA, thickness=2)
-
-
-# Read input video
-# cap = cv2.VideoCapture('video.mp4')
-# cap = cv2.VideoCapture('/Users/stuartrobinson/repos/computervision/andre_aigassi/images/tennis_video/forehand.mp4')
-# cap = cv2.VideoCapture('/Users/stuartrobinson/repos/computervision/andre_aigassi/images/badminton_video/raw/Longest rally in badminton history (Men´s singles).mp4')
-
-# cap = cv2.VideoCapture('/Users/stuartrobinson/repos/computervision/andre_aigassi/images/tennis_video/19sec.mov')
-cap = cv2.VideoCapture('/Users/stuartrobinson/repos/computervision/andre_aigassi/images/badminton/raw/Longest rally in badminton history (Men´s singles).mp4')
-n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) // 2
-h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) // 2
-fps = cap.get(cv2.CAP_PROP_FPS)
-fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-print(n_frames, w, h, fps, fourcc)
-
-out = cv2.VideoWriter('output/cctf_video_out.avi', fourcc, fps, (w, 2*h))
-
-_, prev = cap.read()
-prev = cv2.resize(prev, (w, h))
-prev1_gray = cv2.cvtColor(prev, cv2.COLOR_BGR2GRAY)
-prev2_gray = prev1_gray.copy()
-prev3_gray = prev1_gray.copy()
-prev4_gray = prev1_gray.copy()
-prev5_gray = prev1_gray.copy()
-prev6_gray = prev1_gray.copy()
 
 for i in range(n_frames - 2):
     success, frame_color = cap.read()
@@ -209,18 +222,17 @@ for i in range(n_frames - 2):
         # frame_out = cv2.hconcat([frame, prev1_gray, prev2_gray, prev3_gray])
         # frame_out = cctf
         frame_out = cctfUnaligned
-        frame_out = cv2.vconcat([cctfUnaligned, frame_color])
+        # frame_out = cv2.vconcat([cctfUnaligned, frame_color])
         #
-        cv2.imshow("asdf", frame_out)
-        # cv2.imshow("asdf", prev5_gray)
-        cv2.waitKey(10)
+        # cv2.imshow("asdf", frame_out)
+        # cv2.waitKey(10)
         out.write(frame_out)  # https://stackoverflow.com/a/50076149/8870055
-    prev6_gray = prev5_gray.copy()
-    prev5_gray = prev4_gray.copy()
-    prev4_gray = prev3_gray.copy()
-    prev3_gray = prev2_gray.copy()
-    prev2_gray = prev1_gray.copy()
-    prev1_gray = frame.copy()
+    prev6_gray = prev5_gray#.copy()
+    prev5_gray = prev4_gray#.copy()
+    prev4_gray = prev3_gray#.copy()
+    prev3_gray = prev2_gray#.copy()
+    prev2_gray = prev1_gray#.copy()
+    prev1_gray = frame#.copy()
 
 # Release video
 cap.release()

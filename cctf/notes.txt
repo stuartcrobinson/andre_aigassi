@@ -1,0 +1,16 @@
+"""
+helen chat outline:
+
+experiments w/ different temporal filters seen on youtube channel:
+https://www.youtube.com/channel/UCwUb32DzUVBnXcmVJUvXucw/videos?view=0&sort=dd&shelf_id=0
+
+1.  just badminton
+       https://www.youtube.com/watch?v=GEU0dcaJ9-w&feature=youtu.be
+2.  with orig:
+       https://youtu.be/yBMZNMiwEZg
+3.  show pic on desktop left
+
+4.  tennis aligned vs unaligned
+        https://www.youtube.com/watch?v=SAyHpU-CIRo
+5.  show pic on desktop left
+"""

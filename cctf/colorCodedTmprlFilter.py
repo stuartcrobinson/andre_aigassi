@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 
+from satyaHomography2018 import alignHomography2018
+
 # im0 = cv2.imread('/Users/stuartrobinson/repos/computervision/andre_aigassi/images/badminton/Badminton_dataset/video_frames/4.jpg')
 # im1 = cv2.imread('/Users/stuartrobinson/repos/computervision/andre_aigassi/images/badminton/Badminton_dataset/video_frames/5.jpg')
 # im2 = cv2.imread('/Users/stuartrobinson/repos/computervision/andre_aigassi/images/badminton/Badminton_dataset/video_frames/6.jpg')
@@ -111,8 +113,19 @@ cv2.waitKey(1000)
 cv2.waitKey(1000)
 
 
-def getCctf(g0, g1, g2, g3, g4, g5, g6):
+def getCctf(g0, g1, g2, g3, g4, g5, g6, doAlign=False):
     ''' g for gray'''
+    # doAlign = True
+    # im1Gray = cv2.cvtColor(im1, cv2.COLOR_BGR2GRAY)
+    #
+    if doAlign:
+        g0 = cv2.cvtColor(alignHomography2018(cv2.cvtColor(g0, cv2.COLOR_GRAY2BGR), g0, g3), cv2.COLOR_BGR2GRAY).copy()
+        g1 = cv2.cvtColor(alignHomography2018(cv2.cvtColor(g1, cv2.COLOR_GRAY2BGR), g1, g3), cv2.COLOR_BGR2GRAY).copy()
+        g2 = cv2.cvtColor(alignHomography2018(cv2.cvtColor(g2, cv2.COLOR_GRAY2BGR), g2, g3), cv2.COLOR_BGR2GRAY).copy()
+        g3 = cv2.cvtColor(alignHomography2018(cv2.cvtColor(g3, cv2.COLOR_GRAY2BGR), g3, g3), cv2.COLOR_BGR2GRAY).copy()
+        g4 = cv2.cvtColor(alignHomography2018(cv2.cvtColor(g4, cv2.COLOR_GRAY2BGR), g4, g3), cv2.COLOR_BGR2GRAY).copy()
+        g5 = cv2.cvtColor(alignHomography2018(cv2.cvtColor(g5, cv2.COLOR_GRAY2BGR), g5, g3), cv2.COLOR_BGR2GRAY).copy()
+        g6 = cv2.cvtColor(alignHomography2018(cv2.cvtColor(g6, cv2.COLOR_GRAY2BGR), g6, g3), cv2.COLOR_BGR2GRAY).copy()
     diff0_1 = getDiff(g0, g1)
     diff1_2 = getDiff(g1, g2)
     diff2_3 = getDiff(g2, g3)
@@ -136,11 +149,18 @@ def getCctf(g0, g1, g2, g3, g4, g5, g6):
     diff5_6c = changeColor(diff5_6, getColor(s, 255, 0, 255))
     #
     cctf = diff0_1c + diff1_2c + diff2_3c + diff3_4c + diff4_5c + diff5_6c
-    cctf = cctf * 1.5
+    cctf = cctf * 4
     cctf = np.minimum(cctf, getColor(s, 255, 255, 255))
     cctf = np.maximum(cctf, getColor(s, 0, 0, 0))
     cctf = cctf.astype('uint8')
     return cctf
+
+
+def writeTextTopLeft(image_in, text):
+    cv2.putText(img=image_in, text=text, org=(10, 30),
+                fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=[0, 0, 0], lineType=cv2.LINE_AA, thickness=4)
+    cv2.putText(img=image_in, text=text, org=(10, 30),
+                fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=[100, 100, 100], lineType=cv2.LINE_AA, thickness=2)
 
 
 # Read input video
@@ -148,7 +168,8 @@ def getCctf(g0, g1, g2, g3, g4, g5, g6):
 # cap = cv2.VideoCapture('/Users/stuartrobinson/repos/computervision/andre_aigassi/images/tennis_video/forehand.mp4')
 # cap = cv2.VideoCapture('/Users/stuartrobinson/repos/computervision/andre_aigassi/images/badminton_video/raw/Longest rally in badminton history (Men´s singles).mp4')
 
-cap = cv2.VideoCapture('/Users/stuartrobinson/repos/computervision/andre_aigassi/images/tennis_video/19sec.mov')
+# cap = cv2.VideoCapture('/Users/stuartrobinson/repos/computervision/andre_aigassi/images/tennis_video/19sec.mov')
+cap = cv2.VideoCapture('/Users/stuartrobinson/repos/computervision/andre_aigassi/images/badminton/raw/Longest rally in badminton history (Men´s singles).mp4')
 n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) // 2
 h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) // 2
@@ -156,7 +177,7 @@ fps = cap.get(cv2.CAP_PROP_FPS)
 fourcc = cv2.VideoWriter_fourcc(*'MJPG')
 print(n_frames, w, h, fps, fourcc)
 
-out = cv2.VideoWriter('output/cctf_video_out.avi', fourcc, fps, (w, h))
+out = cv2.VideoWriter('output/cctf_video_out.avi', fourcc, fps, (w, 2*h))
 
 _, prev = cap.read()
 prev = cv2.resize(prev, (w, h))
@@ -169,6 +190,7 @@ prev6_gray = prev1_gray.copy()
 
 for i in range(n_frames - 2):
     success, frame_color = cap.read()
+    print("frame:", i)
     if not success:
         break
     frame_color = cv2.resize(frame_color, (w, h))
@@ -177,16 +199,22 @@ for i in range(n_frames - 2):
     # diff = getDiff(frame, prev1_gray)
     # diff_grayRgb = cv2.cvtColor(diff, cv2.COLOR_GRAY2BGR)
     #
-    cctf = getCctf(frame, prev1_gray, prev2_gray, prev3_gray, prev4_gray, prev5_gray, prev6_gray)
-    #
-    # frame_out = cv2.hconcat([frame, prev1_gray, prev2_gray, prev3_gray])
-    # frame_out = cv2.hconcat([frame, prev1_gray, prev2_gray, prev3_gray])
-    frame_out = cctf
-    #
-    cv2.imshow("asdf", frame_out)
-    # cv2.imshow("asdf", prev5_gray)
-    cv2.waitKey(10)
-    out.write(cctf)  # https://stackoverflow.com/a/50076149/8870055
+    if i > 98:
+        # cctfAligned = getCctf(frame, prev1_gray, prev2_gray, prev3_gray, prev4_gray, prev5_gray, prev6_gray, True)
+        cctfUnaligned = getCctf(frame, prev1_gray, prev2_gray, prev3_gray, prev4_gray, prev5_gray, prev6_gray, False)
+        #
+        # writeTextTopLeft(cctfAligned, 'aligned')
+        # writeTextTopLeft(cctfUnaligned, 'unaligned')
+        # frame_out = cv2.hconcat([frame, prev1_gray, prev2_gray, prev3_gray])
+        # frame_out = cv2.hconcat([frame, prev1_gray, prev2_gray, prev3_gray])
+        # frame_out = cctf
+        frame_out = cctfUnaligned
+        frame_out = cv2.vconcat([cctfUnaligned, frame_color])
+        #
+        cv2.imshow("asdf", frame_out)
+        # cv2.imshow("asdf", prev5_gray)
+        cv2.waitKey(10)
+        out.write(frame_out)  # https://stackoverflow.com/a/50076149/8870055
     prev6_gray = prev5_gray.copy()
     prev5_gray = prev4_gray.copy()
     prev4_gray = prev3_gray.copy()

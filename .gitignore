@@ -3,3 +3,4 @@ images/
 .idea/
 .vscode/
 output/
+*.npy

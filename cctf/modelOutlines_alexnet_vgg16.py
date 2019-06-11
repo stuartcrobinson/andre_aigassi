@@ -29,12 +29,16 @@ Conv2D(512, (3, 3),
 Conv2D(512, (3, 3),
 MaxPooling2D((2, 2), strides=(2, 2)
 
+classes=1000
+
 Flatten(name='flatten')(x)
 Dense(4096, activation='relu', name='fc1')(x)
 Dense(4096, activation='relu', name='fc2')(x)
 Dense(classes, activation='softmax', name='predictions')(x)
 
-alexnet: https://github.com/eweill/keras-deepcv/blob/master/models/classification/alexnet.py
+alexnet:    https://github.com/eweill/keras-deepcv/blob/master/models/classification/alexnet.py
+            https://www.learnopencv.com/number-of-parameters-and-tensor-sizes-in-convolutional-neural-network/
+            https://medium.com/@smallfishbigsea/a-walk-through-of-alexnet-6cbd137a5637
 
 
 Conv2D(96, (11, 11), input_shape=img_shape,

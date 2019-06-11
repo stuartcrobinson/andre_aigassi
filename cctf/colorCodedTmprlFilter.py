@@ -233,3 +233,8 @@ def generateCctfVideoFileFromVideo():
 generateCctfTrackNetBadmintonImagesNpyFile(224)
 # generateCctfTrackNetBadmintonImagesNpyFile(112)
 
+#TODO start here.  by running this file.  a lot of things are messed up while debugging.
+# trying to check if coordinates are correct over cctf images.
+#rebuild X and Y.  use frame number as indices.  not frameNumber-1.
+# visually check coordinates at each step.
+# maybe getting screwed up during image resize for some reason????

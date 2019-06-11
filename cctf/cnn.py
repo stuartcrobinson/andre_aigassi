@@ -47,9 +47,7 @@ from keras.layers import Dense, Flatten
 from keras.models import Sequential
 from sklearn.model_selection import train_test_split
 
-from cctf.qaTrackNetBadmintonData import getBadmintonCoordinatesAndConf, coordinatesFile
-from cctf.qaTrackNetBadmintonData import getImage
-from cctf.qaTrackNetBadmintonData import getResizeFactor
+from cctf.cctfTools import getResizeFactor, getImage, coordinatesFile, getBadmintonCoordinatesAndConf
 
 
 def generateTestAndTrain(images, visAndCoords, imgHeight):

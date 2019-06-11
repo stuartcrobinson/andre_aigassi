@@ -277,6 +277,37 @@ ffmpeg -i forehand.mp4 ./frames/raw/forehand/%06d.png
 ugh - openpose hangs forever when image_dir too big.  i split up 19sec into 5 diff folders. 19sec_1 etc
 
 
+"""
+
+trying tracknet
+python  predict_video.py  --save_weights_path=weights/model.3 --input_video_path="/media/andersen/D/Test/Clip1.mp4" --output_video_path="/media/andersen/D/Test/Clip1_TrackNet.mp4" --n_classes=256
+python predict_video.py  --save_weights_path=weights/model.3 --input_video_path="/Users/stuartrobinson/repos/computervision/andre_aigassi/images/tennis_video/forehand.mp4" --output_video_path="/Users/stuartrobinson/repos/computervision/andre_aigassi/output/forehand_tracknet.mp4" --n_classes=256
+
+sudo pip install numpy
+sudo pip install matplotlib
+sudo pip install pillow
+sudo pip install keras
+sudo pip install opencv-python
+sudo pip install pydot
+sudo pip install h5py
+"""
+
+"""
+helen chat outline: june 10 2019
+
+experiments w/ different temporal filters seen on youtube channel:
+https://www.youtube.com/channel/UCwUb32DzUVBnXcmVJUvXucw/videos?view=0&sort=dd&shelf_id=0
+
+1.  just badminton
+       https://www.youtube.com/watch?v=GEU0dcaJ9-w&feature=youtu.be
+2.  with orig:
+       https://youtu.be/yBMZNMiwEZg
+3.  show pic on desktop left
+
+4.  tennis aligned vs unaligned
+        https://www.youtube.com/watch?v=SAyHpU-CIRo
+5.  show pic on desktop left
+"""
 
 
 

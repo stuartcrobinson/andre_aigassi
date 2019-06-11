@@ -1,6 +1,6 @@
 import cv2
-from satyaHomography2018 import alignHomography2018
-from affineMusic import alignAffine
+from satyaStabilization.satyaHomography2018 import alignHomography2018
+# from affineMusic import alignAffine
 
 # import satyaStabilization.align.alignImages as asdf
 

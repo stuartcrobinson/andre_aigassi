@@ -1,16 +1,12 @@
-"""
-helen chat outline:
+TODO
 
-experiments w/ different temporal filters seen on youtube channel:
-https://www.youtube.com/channel/UCwUb32DzUVBnXcmVJUvXucw/videos?view=0&sort=dd&shelf_id=0
+cnn error not shrinking.  i checked coordinates on .npy cctf images and they seem unaligned.
+but images too small to be sure
 
-1.  just badminton
-       https://www.youtube.com/watch?v=GEU0dcaJ9-w&feature=youtu.be
-2.  with orig:
-       https://youtu.be/yBMZNMiwEZg
-3.  show pic on desktop left
+need to make fewer-frames versions at full-size.  refactor code to remove dups.
 
-4.  tennis aligned vs unaligned
-        https://www.youtube.com/watch?v=SAyHpU-CIRo
-5.  show pic on desktop left
-"""
+put functions in single cctfTools file?  stop running code from same file as functions.  ruins imports.
+
+add code to easily visualize coordinates on frames at each step.
+
+get numFrames from function, not code.  to adjust across framework

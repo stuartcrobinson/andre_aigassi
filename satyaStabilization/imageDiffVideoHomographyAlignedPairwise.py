@@ -1,7 +1,9 @@
 import cv2
 import numpy as np
 
-from satyaHomography2018 import alignHomography2018
+from cctf.colorCodedTmprlFilter import getDiff
+from imgTools import writeTextTopLeft
+from satyaStabilization.satyaHomography2018 import alignHomography2018
 
 # Read input video
 # cap = cv2.VideoCapture('video.mp4')
@@ -20,20 +22,6 @@ out = cv2.VideoWriter('output/video_out.avi', fourcc, fps, (w, 2 * h))
 _, prev = cap.read()
 prev = cv2.resize(prev, (w, h))
 prev_gray = cv2.cvtColor(prev, cv2.COLOR_BGR2GRAY)
-
-
-def getDiff(img1, img2):
-    '''img1 - img2'''
-    stack = np.dstack([img1, img2])
-    diff = np.absolute(np.dot(stack, [1, -1])).astype('uint8')
-    return diff
-
-
-def writeTextTopLeft(image_in, text):
-    cv2.putText(img=image_in, text=text, org=(10, 30),
-                fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=[0, 0, 0], lineType=cv2.LINE_AA, thickness=4)
-    cv2.putText(img=image_in, text=text, org=(10, 30),
-                fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=[100, 100, 100], lineType=cv2.LINE_AA, thickness=2)
 
 
 for i in range(n_frames - 2):

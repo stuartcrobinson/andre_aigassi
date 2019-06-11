@@ -3,12 +3,37 @@ import os
 import cv2
 import numpy as np
 
-from cctf.cctfTools import getColorBlock, getDiff, colorizeGrayImg
-from cctf.cctfTools import getColorMakingMatrices, getCctf
+import imgTools as tools
 from satyaStabilization.satyaHomography2018 import alignHomography2018
 
-coordinatesFile = "/Users/stuartrobinson/repos/computervision/andre_aigassi/images/badminton/Badminton_dataset/Badminton_label.csv"
-imagesDir = "/Users/stuartrobinson/repos/computervision/andre_aigassi/images/badminton/Badminton_dataset/video_frames"
+trackNetBadmintonTDCoordinatesFile = "/Users/stuartrobinson/repos/computervision/andre_aigassi/images/badminton/Badminton_dataset/Badminton_label.csv"
+trackNetBadmintonTDImagesDir = "/Users/stuartrobinson/repos/computervision/andre_aigassi/images/badminton/Badminton_dataset/video_frames"
+
+
+def getImage(frameNumber):
+    path = os.path.join(trackNetBadmintonTDImagesDir, str(frameNumber) + '.jpg')
+    image = cv2.imread(path)
+    return image
+
+
+def getBwImage(frameNumber, resizeHeight=-1, doSquare=False):
+    path = os.path.join(trackNetBadmintonTDImagesDir, str(frameNumber) + '.jpg')
+    image = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+    if resizeHeight > 0:
+        image = resizeImage(image, resizeHeight)
+    if doSquare:
+        image = centerSquareCrop(image)
+    return image
+
+
+def getNumTracknetTDFrames():
+    numFrames = sum(1 for line in open(trackNetBadmintonTDCoordinatesFile)) - 1
+    return numFrames
+    # return 100
+
+
+def getStartFrame():
+    return 75
 
 
 def getColorBlock(shape, r, g, b):
@@ -33,41 +58,32 @@ def getDiff(img1, img2):
     return diff
 
 
-def writeTextTopLeft(image_in, text):
-    cv2.putText(img=image_in, text=text, org=(10, 30),
-                fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=[0, 0, 0], lineType=cv2.LINE_AA, thickness=4)
-    cv2.putText(img=image_in, text=text, org=(10, 30),
-                fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=[100, 100, 100], lineType=cv2.LINE_AA, thickness=2)
+def getResizeFactor(targetHeight, im):
+    height = im.shape[0]
+    resizeFactr = height / targetHeight
+    return resizeFactr
 
 
-def getImage(frameNumber):
-    path = os.path.join(imagesDir, str(frameNumber) + '.jpg')
-    # print("path", path)
-    image = cv2.imread(path)
-    return image
-
-
-def getResizeFactor(targetHeight, image):
+def getSquareCropLeftRight(im):
     # crop image to center square
-    shape = image.shape
-    width = shape[1]
-    height = shape[0]
+    width = im.shape[1]
+    height = im.shape[0]
     centerColumn = width // 2
     halfHeight = height // 2
     left = centerColumn - halfHeight
     right = centerColumn + halfHeight
-    image = image[:, left:right, :]
-    resizeFactr = height / targetHeight
-    return resizeFactr, left, right
+    return left, right
 
 
-def getBadmintonCoordinatesAndConf(h):
-    resizeFactor, left, right = getResizeFactor(h, getImage(1))
+def getBadmintonVisAndCoords_resizedAndSquared(h):
+    sampleImage = getBwImage(1)
+    resizeFactor = getResizeFactor(h, sampleImage)
+    left, right = getSquareCropLeftRight(sampleImage)
 
-    n_frames = sum(1 for line in open(coordinatesFile)) - 1
-    visAndCoordinates = np.zeros([n_frames, 3], dtype=int)
+    n_rows = sum(1 for line in open(trackNetBadmintonTDCoordinatesFile)) - 1
+    visAndCoordinates = np.zeros([n_rows, 3], dtype=int)
     #
-    with open(coordinatesFile) as f:
+    with open(trackNetBadmintonTDCoordinatesFile) as f:
         next(f)
         for i, line in enumerate(f):
             frameNumber, visibility, x, y = list(map(int, line.strip().split(',')))
@@ -94,7 +110,7 @@ def getColorMakingMatrices(shape):
     return c1, c2, c3, c4, c5, c6, black, white
 
 
-def getCctf(g0, g1, g2, g3, g4, g5, g6, c1, c2, c3, c4, c5, c6, black, white, doAlign=False):
+def getCctf(g0, g1, g2, g3, g4, g5, g6, c1, c2, c3, c4, c5, c6, black, white, doAlign=False, brightness=1):
     ''' g for gray image, c for color-kinda matrix.  not actual colors, some neg values'''
     if doAlign:
         g0 = cv2.cvtColor(alignHomography2018(cv2.cvtColor(g0, cv2.COLOR_GRAY2BGR), g0, g3), cv2.COLOR_BGR2GRAY).copy()
@@ -111,8 +127,6 @@ def getCctf(g0, g1, g2, g3, g4, g5, g6, c1, c2, c3, c4, c5, c6, black, white, do
     diff4_5 = getDiff(g4, g5)
     diff5_6 = getDiff(g5, g6)
     #
-    s = g0.shape
-    # this works for rainbow!
     diff0_1c = colorizeGrayImg(diff0_1, c1)
     diff1_2c = colorizeGrayImg(diff1_2, c2)
     diff2_3c = colorizeGrayImg(diff2_3, c3)
@@ -121,51 +135,55 @@ def getCctf(g0, g1, g2, g3, g4, g5, g6, c1, c2, c3, c4, c5, c6, black, white, do
     diff5_6c = colorizeGrayImg(diff5_6, c6)
     #
     cctf = diff0_1c + diff1_2c + diff2_3c + diff3_4c + diff4_5c + diff5_6c
-    # cctf = cctf *cctf
+    if brightness != 1:
+        cctf = cctf * brightness
     cctf = np.minimum(cctf, white)
     cctf = np.maximum(cctf, black)
     cctf = cctf.astype('uint8')
     return cctf
 
 
-def generateCctfTrackNetBadmintonImagesNpyFile(h):
+def generateCctfTrackNetBadmintonImagesNpyFile(targetHeight=-1, startFrame=1, endFrame=getNumTracknetTDFrames(), brightness=1):
+    sampleImage = getBwImage(1)
+    defaultHeight = sampleImage.shape[0]
+    print("default im shape:", sampleImage.shape)
+    if targetHeight < 0:
+        targetHeight = defaultHeight
+
+    print("targetHeight:", targetHeight)
+
     # frames = np.load('badmintonProcessedFrames_full_112.npy')
     # for i in range(0, 110):
     #     im = frames[i]
     #     cv2.imshow("asdf", im)
     #     cv2.waitKey(10)
     # quit()
-    visAndCoords = getBadmintonCoordinatesAndConf(h)
-    w = h
-    n_frames = sum(1 for line in open(coordinatesFile)) - 1
-    prev = getImage(1)
-    prev = cv2.resize(prev, (h, h))
-    prev1_gray = prev2_gray = prev3_gray = prev4_gray = prev5_gray = prev6_gray = cv2.cvtColor(prev, cv2.COLOR_BGR2GRAY)
-    c1, c2, c3, c4, c5, c6, black, white = getColorMakingMatrices(prev1_gray.shape)
-    frames = np.zeros([n_frames, h, h, 3], dtype='uint8')
-    for i in range(1, n_frames - 1):
-        print("frame:", i, " of ", n_frames)
-        im = getImage(i + 1)
-        frame_color = cv2.resize(im, (w, h))
-        frame = cv2.cvtColor(frame_color, cv2.COLOR_BGR2GRAY)
-        frame_out = getCctf(frame, prev1_gray, prev2_gray, prev3_gray, prev4_gray, prev5_gray, prev6_gray, c1, c2, c3, c4, c5, c6, black, white, False)
-        vis, x, y = visAndCoords[i]
-        # tools.writeTextTopLeft(im, str(i) + " of " + str(images.shape[0]))
-        frame_out = cv2.resize(frame_out, (w * 4, h * 4))
-        cv2.circle(frame_out, (x * 4, y * 4), 10, (0, 0, 0), thickness=2)
-        cv2.circle(frame_out, (x * 4, y * 4), 16, (255, 255, 255), thickness=2)
-        cv2.imshow("asdf2", frame_out)
+    visAndCoords = getBadmintonVisAndCoords_resizedAndSquared(targetHeight)
+    n_frames = getNumTracknetTDFrames()
+    prev1 = prev2 = prev3 = prev4 = prev5 = prev6 = getBwImage(1, targetHeight, doSquare=True)
+    c1, c2, c3, c4, c5, c6, black, white = getColorMakingMatrices(prev1.shape)
+    frames = np.zeros([n_frames, targetHeight, targetHeight, 3], dtype='uint8')
+    for i in range(n_frames - 1):
+        frameNumber = i + 1
+        if frameNumber < startFrame:
+            continue
+        if frameNumber > endFrame:
+            break
+        print("frame:", frameNumber, " of ", n_frames)
+        curr = getBwImage(i + 1, targetHeight, doSquare=True)
+        cctfIm = getCctf(curr, prev1, prev2, prev3, prev4, prev5, prev6, c1, c2, c3, c4, c5, c6, black, white, False, brightness)
+        cctfIm = labelFrameNumber(cctfIm, frameNumber, n_frames);
+        cctfIm = encircleBirdie(cctfIm, frameNumber, visAndCoords)
+        cv2.imshow("asdf2", cctfIm)
         cv2.waitKey(100)
-        # frames[i] = frame_out
-        # print(frames)
-        # out.write(frame_out)  # https://stackoverflow.com/a/50076149/8870055
-        prev6_gray = prev5_gray  # .copy()
-        prev5_gray = prev4_gray  # .copy()
-        prev4_gray = prev3_gray  # .copy()
-        prev3_gray = prev2_gray  # .copy()
-        prev2_gray = prev1_gray  # .copy()
-        prev1_gray = frame  # .copy()
-    # np.save('badmintonProcessedFrames_full_' + str(h) + '.npy', frames)
+        frames[i] = cctfIm
+        prev6 = prev5
+        prev5 = prev4
+        prev4 = prev3
+        prev3 = prev2
+        prev2 = prev1
+        prev1 = curr
+    np.save('badmintonProcessedFrames_full_' + str(targetHeight) + '.npy', frames)
     pass
 
 
@@ -236,47 +254,162 @@ def generateCctfVideoFileFromVideo():
     cv2.destroyAllWindows()
 
 
-def loadAllLabeledBadmintonFramesInBlackAndWhite(imgHeight, left, right):
-    # resizeFactor = 5
-    with open(coordinatesFile) as f:
-        next(f)
-        for i, line in enumerate(f):
-            if i < 15800:
-                continue
-            frameNumber, visibility, x, y = list(map(int, line.strip().split(',')))
-            print(frameNumber, visibility, x, y)
-            im = getImage(frameNumber)[:, left:right, :]
-            im = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
-            im = cv2.resize(im, (imgHeight, imgHeight))
+def resizeImage(im, targetHeight):
+    resizeFactor = im.shape[0] / targetHeight
+    targetWidth = int(im.shape[1] / resizeFactor)
+    return cv2.resize(im, (targetWidth, targetHeight))
 
 
-def runQaOnTracknetTrainingData(targetHeight):
-    numFrames = sum(1 for line in open(coordinatesFile)) - 1
+def centerSquareCrop(im):
+    h = im.shape[0]
+    w = im.shape[1]
+    centerColumn = w // 2
+    halfHeight = h // 2
+    left = centerColumn - halfHeight
+    right = centerColumn + halfHeight
+    return im[:, left:right]
 
-    resizeFactor, left, right = getResizeFactor(targetHeight, getImage(1))
 
-    visAndCoords = getBadmintonCoordinatesAndConf(targetHeight)
-    print("visAndCoords.shape:", visAndCoords.shape)
-    for i in range(1, visAndCoords.shape[0]):
-        # if i < 400:
-        #     continue
-        frameNumber = i
-        visibility, x, y = visAndCoords[i]  # list(map(int, line.strip().split(',')))
-        print(frameNumber, visibility, x, y)
-        im = getImage(frameNumber)[:, left:right, :]
-        im = cv2.resize(im, (targetHeight, targetHeight))
-        im = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
-        im = cv2.resize(im, (targetHeight * 3, targetHeight * 3))
+def encircleBirdie(im, frameNumber, visAndCoords):
+    visibility, x, y = visAndCoords[frameNumber - 1]
+    cv2.circle(im, (x, y), 13, (0, 255, 0), thickness=2)
+    cv2.circle(im, (x, y), 15, (255, 255, 255), thickness=2)
+    return im
 
-        writeTextTopLeft(im, str(frameNumber) + " of " + str(numFrames))
-        cv2.circle(im, (x * 3, y * 3), 10, (0, 255, 0), thickness=2)
-        cv2.imshow("asdf2", im)
+
+def labelFrameNumber(im, frameNumber, numFrames):
+    tools.writeTextTopLeft(im, str(frameNumber) + " of " + str(numFrames))
+    return im
+
+from numpy import linalg as LA
+
+def runQaOnTracknetTrainingDataPairsOnly(targetHeight=-1, startFrame=1, endFrame=getNumTracknetTDFrames(), brightness=1):
+    sampleImage = getBwImage(1)
+    defaultHeight = sampleImage.shape[0]
+    print("default im shape:", sampleImage.shape)
+    if targetHeight < 0:
+        targetHeight = defaultHeight
+
+    print("targetHeight:", targetHeight)
+    visAndCoords = getBadmintonVisAndCoords_resizedAndSquared(targetHeight)
+    n_frames = getNumTracknetTDFrames()
+    prev1 = getBwImage(1, targetHeight, doSquare=True)
+    for i in range(n_frames - 1):
+        frameNumber = i + 1
+        if frameNumber < startFrame:
+            continue
+        if frameNumber > endFrame:
+            break
+        # print("frame:", frameNumber, " of ", n_frames)
+        curr = getBwImage(i + 1, targetHeight, doSquare=True)
+        diff = getDiff(curr, prev1)
+        black = getColorBlock(diff.shape, 0, 0, 0)
+        if diff == black:
+            print("is black!!!!!!!!!!!")
+        normCurr = LA.norm(curr)        #these are not helpful for identifying repeated frames
+        normPrev= LA.norm(prev1)
+        normDiff = normCurr - normPrev
+        maxElement = np.amax(diff)
+        theMean = diff.mean()
+        theSum = diff.sum()
+        print("frame: {}  max: {:4s}  mean: {:.3f} sum: {:7} normdiff: {:.3f}".format(frameNumber, str(maxElement), theMean, theSum, abs(normDiff)))
+        diff = labelFrameNumber(diff, frameNumber, n_frames);
+        diff = encircleBirdie(diff, frameNumber, visAndCoords)
+        # print("diff.shape", diff.shape)
+        cv2.imshow("asdf2", diff)
+        cv2.waitKey(1000)
+        prev1 = curr
+    pass
+
+def recordBadFrames(targetHeight=-1, startFrame=1, endFrame=getNumTracknetTDFrames()):
+    sampleImage = getBwImage(1)
+    defaultHeight = sampleImage.shape[0]
+    print("default im shape:", sampleImage.shape)
+    if targetHeight < 0:
+        targetHeight = defaultHeight
+
+    print("targetHeight:", targetHeight)
+    visAndCoords = getBadmintonVisAndCoords_resizedAndSquared(targetHeight)
+    n_frames = getNumTracknetTDFrames()
+    prev1 = getBwImage(1, targetHeight, doSquare=True)
+    for i in range(n_frames - 1):
+        frameNumber = i + 1
+        if frameNumber < startFrame:
+            continue
+        if frameNumber > endFrame:
+            break
+        # print("frame:", frameNumber, " of ", n_frames)
+        curr = getBwImage(i + 1, targetHeight, doSquare=True)
+        diff = getDiff(curr, prev1)
+        black = getColorBlock(diff.shape, 0, 0, 0)
+        if diff == black:
+            print("is black!!!!!!!!!!!")
+        normCurr = LA.norm(curr)        #these are not helpful for identifying repeated frames
+        normPrev= LA.norm(prev1)
+        normDiff = normCurr - normPrev
+        maxElement = np.amax(diff)
+        theMean = diff.mean()
+        theSum = diff.sum()
+        print("frame: {}  max: {:4s}  mean: {:.3f} sum: {:7} normdiff: {:.3f}".format(frameNumber, str(maxElement), theMean, theSum, abs(normDiff)))
+        diff = labelFrameNumber(diff, frameNumber, n_frames);
+        diff = encircleBirdie(diff, frameNumber, visAndCoords)
+        # print("diff.shape", diff.shape)
+        cv2.imshow("asdf2", diff)
         cv2.waitKey(100)
+        prev1 = curr
+    pass
+
+
+def runQaOnTracknetTrainingData(targetHeight=-1, startFrame=1, endFrame=getNumTracknetTDFrames()):
+    """
+    doing QA on I-No Liao's TrackNet's badminton tracking traing data from:
+    https://inoliao.github.io/CoachAI/
+    https://drive.google.com/uc?export=download&id=1ZgoGm5y3_fSwzWLBFe_4Zu4LnMMkUd0J
+
+    this file displays each image in the training data with a green circle around the coordinates listed in Badminton_label.csv
+
+    purpose is to make sure the listed coordinates are actually effectively tracking the birdie.
+
+    also to make sure we're cropping and resizing correctly. ✓✓
+
+    result -- data looks great !!! thank you I-No Liao!!!!
+    """
+
+    sampleImage = getBwImage(1)
+    defaultHeight = sampleImage.shape[0]
+    print("default im shape:", sampleImage.shape)
+    if targetHeight < 0:
+        targetHeight = defaultHeight
+
+    numFrames = getNumTracknetTDFrames()
+
+    visAndCoords = getBadmintonVisAndCoords_resizedAndSquared(targetHeight)
+
+    print("visAndCoords.shape:", visAndCoords.shape)
+    for i in range(numFrames):
+        frameNumber = i + 1
+        if frameNumber < startFrame:
+            continue
+        if frameNumber > endFrame:
+            break
+        im = getBwImage(frameNumber)
+        im = centerSquareCrop(im)
+        maxElement = np.amax(im)
+        theMean = im.mean()
+        theSum = im.sum()
+        print("frame: {}  max: {:7s}   mean: {:.3f}  sum: {}".format(frameNumber, str(maxElement), theMean, theSum))
+        if targetHeight != defaultHeight:
+            im = resizeImage(im, targetHeight)
+
+        tools.writeTextTopLeft(im, str(frameNumber) + " of " + str(numFrames))
+        im = encircleBirdie(im, frameNumber, visAndCoords)
+        cv2.imshow("asdf2", im)
+        cv2.waitKey(300)
 
 
 def runQaOnNpyCctfFrames(imgHeight):
     images = np.load(f'/Users/stuartrobinson/repos/computervision/andre_aigassi/cctf/badmintonProcessedFrames_full_{imgHeight}_safe.npy')
-    visAndCoords = getBadmintonCoordinatesAndConf(imgHeight)
+    visAndCoords = getBadmintonVisAndCoords_resizedAndSquared(imgHeight)
 
     black = getColorBlock(images[0].shape, 0, 0, 0)
     white = getColorBlock(images[0].shape, 255, 255, 255)

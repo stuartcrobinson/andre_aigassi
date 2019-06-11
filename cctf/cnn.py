@@ -47,8 +47,7 @@ from keras.layers import Dense, Flatten
 from keras.models import Sequential
 from sklearn.model_selection import train_test_split
 
-from cctf.cctfTools import getResizeFactor, getImage, coordinatesFile, getBadmintonCoordinatesAndConf
-
+import cctf.cctfTools  as ctools
 
 def generateTestAndTrain(images, visAndCoords, imgHeight):
     print("running cross_validate...")
@@ -96,14 +95,12 @@ imgHeight = 112
 # input image dimensions
 img_x, img_y = imgHeight, imgHeight
 
-# load all labeled images into a list of ndarrays
-resizeFactor, left, right = getResizeFactor(imgHeight, getImage(1))
 
-n_frames = sum(1 for line in open(coordinatesFile)) - 1
+n_frames = ctools.getNumTracknetTDFrames()
 
 print("load images size " + str(imgHeight))
 images = np.load(f'/Users/stuartrobinson/repos/computervision/andre_aigassi/cctf/badmintonProcessedFrames_full_{imgHeight}_safe.npy')
-visAndCoords = getBadmintonCoordinatesAndConf(imgHeight)
+visAndCoords = ctools.getBadmintonVisAndCoords_resizedAndSquared(imgHeight)
 
 x_train, x_test, y_train, y_test = generateTestAndTrain(images, visAndCoords, imgHeight)
 x_train, x_test, y_train, y_test = loadTestAndTrain(imgHeight)

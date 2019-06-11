@@ -1,5 +1,0 @@
-from cctf.cctfTools import generateCctfTrackNetBadmintonImagesNpyFile, generateCctfVideoFileFromVideo
-
-generateCctfVideoFileFromVideo()
-generateCctfTrackNetBadmintonImagesNpyFile(224)
-generateCctfTrackNetBadmintonImagesNpyFile(112)

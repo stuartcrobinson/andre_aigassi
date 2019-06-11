@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-from cctf.colorCodedTmprlFilter import getDiff
+from cctf.main import getDiff
 from imgTools import writeTextTopLeft
 from satyaStabilization.satyaHomography2018 import alignHomography2018
 
